@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-100 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mahjong Club - Table Booking & POS System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel Exporting -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#ecfdf5',
+                            100: '#d1fae5',
+                            500: '#10b981',
+                            600: '#059669',
+                            700: '#047857',
+                            800: '#065f46',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        
+        /* Custom smooth light scrollbar for grid */
+        ::-webkit-scrollbar { width: 6px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* 10:00 to 02:00 spans 16 hours = 64 x 15-min columns */
+        .grid-timeline {
+            display: grid;
+            grid-template-columns: 110px repeat(64, minmax(28px, 1fr));
+        }
+
+        .table-sticky-col {
+            position: sticky;
+            left: 0;
+            z-index: 20;
+            background-color: #ffffff;
+        }
+
+        .header-sticky-row {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            background-color: #f8fafc;
+        }
+
+        .modal-blur {
+            backdrop-filter: blur(6px);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col bg-slate-100 text-slate-800 overflow-hidden select-none">
+
+    <!-- Top Bar Navigation -->
+    <header class="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between shadow-sm shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-emerald-500/20">
+                🀄
+            </div>
+            <div>
+                <h1 class="font-extrabold text-lg text-slate-900 leading-tight">Mahjong Club POS</h1>
+                <p class="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Cashier Terminal
+                </p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-sm font-semibold">
+            <button id="nav-book" onclick="switchPage('book')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span>Timeline (10:00 - 02:00)</span>
+            </button>
+            <button id="nav-trans" onclick="switchPage('trans')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+                <i class="fa-solid fa-receipt"></i>
+                <span>Daily Transactions</span>
+            </button>
+            <button id="nav-setting" onclick="switchPage('setting')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span>Owner Settings</span>
+            </button>
+        </nav>
+
+        <!-- Current Hourly Rate Display & Quick Actions -->
+        <div class="flex items-center gap-3">
+            <div class="hidden sm:flex flex-col text-right bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl">
+                <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold" id="current-day-label">Rate Today</span>
+                <span class="text-sm font-extrabold text-emerald-600" id="current-rate-display">Rp 50.000 / hr</span>
+            </div>
+            <button onclick="openBookingModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20 text-sm">
+                <i class="fa-solid fa-plus text-base"></i>
+                <span>New Booking</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 flex overflow-hidden">
+
+        <!-- ========================================== -->
+        <!-- PAGE 1: BOOKING TIMELINE PAGE -->
+        <!-- ========================================== -->
+        <div id="page-book" class="flex-1 flex w-full h-full overflow-hidden">
+            <!-- Left Sidebar - Date Picker & Quick Select -->
+            <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Booking Date</label>
+                    <input type="date" id="selected-date" onchange="handleDateChange(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
+                </div>
+
+                <!-- Quick Date Switchers -->
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Quick Jump</span>
+                    <button onclick="jumpToDate(0)" id="btn-date-today" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800">
+                        <span><i class="fa-solid fa-calendar-day mr-2 text-emerald-600"></i>Today</span>
+                        <span id="label-date-today" class="text-xs text-emerald-600"></span>
+                    </button>
+                    <button onclick="jumpToDate(1)" id="btn-date-tomorrow" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700">
+                        <span><i class="fa-solid fa-sun mr-2 text-amber-500"></i>Tomorrow</span>
+                        <span id="label-date-tomorrow" class="text-xs text-slate-400"></span>
+                    </button>
+                    <button onclick="jumpToDate(2)" id="btn-date-next" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700">
+                        <span><i class="fa-solid fa-forward-fast mr-2 text-sky-500"></i>In 2 Days</span>
+                        <span id="label-date-next" class="text-xs text-slate-400"></span>
+                    </button>
+                </div>
+
+                <!-- Legend & Operating Hours Info -->
+                <div class="mt-auto bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex flex-col gap-2.5 text-xs shadow-sm">
+                    <span class="font-bold text-slate-600 uppercase tracking-wider text-[10px]">Status Legend</span>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-md bg-amber-100 border border-amber-400"></span>
+                        <span class="text-slate-700 font-semibold">Booked (Unpaid)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-md bg-emerald-600 border border-emerald-500"></span>
+                        <span class="text-slate-700 font-semibold">Paid & Confirmed</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-md bg-white border border-slate-300"></span>
+                        <span class="text-slate-500">Available Slot</span>
+                    </div>
+                    <div class="pt-2 border-t border-slate-200 text-[11px] text-slate-500 font-medium">
+                        <i class="fa-solid fa-clock text-slate-400 mr-1"></i> Hours: 10:00 AM - 02:00 AM
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Timeline Content Grid -->
+            <section class="flex-1 flex flex-col overflow-hidden bg-white">
+                <!-- Timeline Header Bar Info -->
+                <div class="bg-slate-50 border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shrink-0">
+                    <div>
+                        <h2 class="text-base font-extrabold text-slate-900" id="current-view-date-title">Tables Overview</h2>
+                        <p class="text-xs text-slate-500">Click any open slot (15-min precision) or booked block to manage</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs font-semibold">
+                        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                            <i class="fa-solid fa-table-cells text-emerald-600"></i>
+                            <span class="text-slate-700 font-bold">10 Tables</span>
+                        </div>
+                        <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
+                            <i class="fa-solid fa-clock text-amber-500"></i>
+                            <span class="text-slate-700 font-bold" id="day-rate-badge">Rate: Rp 50.000/hr</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scrollable Timeline Grid Area -->
+                <div class="flex-1 overflow-auto relative">
+                    <div class="min-w-[2200px] pb-12">
+                        
+                        <!-- Timeline Header Row (64 x 15-min columns grouped into 16 hourly blocks) -->
+                        <div class="grid-timeline border-b border-slate-200 header-sticky-row shadow-sm">
+                            <div class="table-sticky-col p-3 font-extrabold text-xs text-slate-500 uppercase tracking-wider border-r border-slate-200 flex items-center justify-center">
+                                Table
+                            </div>
+                            <div id="hour-headers-container" class="contents"></div>
+                        </div>
+
+                        <!-- 10 Table Rows -->
+                        <div id="table-rows-container" class="divide-y divide-slate-200">
+                            <!-- JS dynamically populates Table 1 to 10 rows -->
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PAGE 2: DAILY TRANSACTIONS PAGE -->
+        <!-- ========================================== -->
+        <div id="page-trans" class="flex-1 flex w-full h-full overflow-hidden hidden">
+            <!-- Left Sidebar Date Filter -->
+            <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Transaction Date</label>
+                    <input type="date" id="trans-selected-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
+                </div>
+
+                <!-- Daily Financial Summary Card -->
+                <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border border-emerald-500 p-4 rounded-2xl flex flex-col gap-3 shadow-md">
+                    <div class="text-xs font-bold uppercase tracking-wider flex items-center justify-between text-emerald-100">
+                        <span>Daily Income</span>
+                        <i class="fa-solid fa-wallet text-white text-base"></i>
+                    </div>
+                    <div>
+                        <span class="text-xs text-emerald-100 block font-medium">Total Revenue</span>
+                        <span class="text-2xl font-black text-white" id="trans-daily-total">Rp 0</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-500/50 text-xs">
+                        <div>
+                            <span class="text-emerald-100 block text-[10px]">Confirmed</span>
+                            <span class="font-bold text-white" id="trans-daily-count">0 Paid</span>
+                        </div>
+                        <div>
+                            <span class="text-emerald-100 block text-[10px]">Total Play Time</span>
+                            <span class="font-bold text-white" id="trans-daily-hours">0 hrs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export Button -->
+                <button onclick="exportTransactionsToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 text-sm">
+                    <i class="fa-solid fa-file-excel text-lg"></i>
+                    <span>Export Daily Excel</span>
+                </button>
+            </aside>
+
+            <!-- Transactions Table View -->
+            <section class="flex-1 flex flex-col overflow-hidden bg-slate-50 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <span>Confirmed Paid Bookings</span>
+                            <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300" id="trans-count-badge">0 items</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">Official logged receipts for cashier records</p>
+                    </div>
+                </div>
+
+                <!-- Transactions Table -->
+                <div class="flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
+                                <th class="py-3.5 px-4">Receipt ID</th>
+                                <th class="py-3.5 px-4">Customer Name</th>
+                                <th class="py-3.5 px-4">Phone Number</th>
+                                <th class="py-3.5 px-4">Table</th>
+                                <th class="py-3.5 px-4">Time Frame</th>
+                                <th class="py-3.5 px-4">Duration</th>
+                                <th class="py-3.5 px-4 text-right">Base Price</th>
+                                <th class="py-3.5 px-4 text-right">Adjustment / Note</th>
+                                <th class="py-3.5 px-4 text-right">Final Paid</th>
+                                <th class="py-3.5 px-4 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="trans-table-body" class="divide-y divide-slate-200 text-sm">
+                            <!-- JS dynamic rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PAGE 3: OWNER SETTINGS PAGE (PIN PROTECTED) -->
+        <!-- ========================================== -->
+        <div id="page-setting" class="flex-1 flex w-full h-full overflow-y-auto bg-slate-50 p-6">
+            <div class="max-w-xl mx-auto w-full my-auto">
+                
+                <!-- Security PIN Verification Card -->
+                <div id="setting-pin-lock" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Owner Access Only</h2>
+                    <p class="text-xs text-slate-500 mt-1 mb-6">Enter your 4-digit PIN to manage weekly hourly rates and data cleanup.</p>
+
+                    <form onsubmit="handlePinSubmit(event)" class="flex flex-col items-center gap-4">
+                        <div class="flex gap-3 justify-center">
+                            <input type="password" maxlength="4" id="pin-input" placeholder="••••" class="w-40 text-center tracking-[1em] text-2xl font-black bg-slate-50 border border-slate-300 rounded-2xl py-3 text-emerald-600 focus:outline-none focus:border-emerald-500 transition shadow-inner">
+                        </div>
+                        <p id="pin-error-msg" class="text-xs text-red-500 hidden font-bold"></p>
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm mt-2">
+                            Unlock Settings
+                        </button>
+                    </form>
+                    <p class="text-[11px] text-slate-400 mt-4">Default PIN for testing: <span class="font-mono text-slate-600 font-bold">1234</span></p>
+                </div>
+
+                <!-- Unlocked Settings Panel -->
+                <div id="setting-panel" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl hidden flex flex-col gap-6">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Owner Control Panel</h2>
+                                <p class="text-xs text-slate-500">Configure weekly rates (Mon-Sun) & security</p>
+                            </div>
+                        </div>
+                        <button onclick="lockSettings()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3.5 py-2 rounded-xl font-bold border border-slate-300 transition">
+                            <i class="fa-solid fa-lock mr-1.5"></i> Lock
+                        </button>
+                    </div>
+
+                    <!-- Price Setting Form (Monday to Sunday) -->
+                    <form onsubmit="savePriceSetting(event)" class="flex flex-col gap-5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Hourly Rates by Day of Week (IDR)</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-600">Monday</span>
+                                    <input type="number" step="1000" id="rate-Mon" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-600">Tuesday</span>
+                                    <input type="number" step="1000" id="rate-Tue" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-600">Wednesday</span>
+                                    <input type="number" step="1000" id="rate-Wed" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-600">Thursday</span>
+                                    <input type="number" step="1000" id="rate-Thu" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-slate-600 font-bold text-emerald-800">Friday (Weekend)</span>
+                                    <input type="number" step="1000" id="rate-Fri" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-xs font-semibold text-amber-700 font-bold">Saturday (Weekend)</span>
+                                    <input type="number" step="1000" id="rate-Sat" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div class="col-span-2">
+                                    <span class="text-xs font-semibold text-amber-700 font-bold">Sunday (Weekend)</span>
+                                    <input type="number" step="1000" id="rate-Sun" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-400 mt-2">Bookings automatically use the rate for their specific day of the week.</p>
+                        </div>
+
+                        <!-- Change PIN Form -->
+                        <div class="pt-4 border-t border-slate-200">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Change Owner Security PIN</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">New 4-Digit PIN</span>
+                                    <input type="password" maxlength="4" id="setting-new-pin" placeholder="e.g. 8888" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">Confirm PIN</span>
+                                    <input type="password" maxlength="4" id="setting-confirm-pin" placeholder="e.g. 8888" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-emerald-600/20 text-sm">
+                            Save Weekly Rates & Security PIN
+                        </button>
+                    </form>
+                    <p class="text-[11px] text-slate-400 mt-4">Default PIN for testing: <span class="font-mono text-slate-600 font-bold">1234</span></p>
+                </div>
+
+                <!-- Unlocked Settings Panel -->
+                <div id="setting-panel" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl hidden flex flex-col gap-6">
+                    <div class="flex items-center justify-between pb-4 border-b border-slate-200">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-xl">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-slate-900">Owner Control Panel</h2>
+                                <p class="text-xs text-slate-500">Configure business rates & storage</p>
+                            </div>
+                        </div>
+                        <button onclick="lockSettings()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3.5 py-2 rounded-xl font-bold border border-slate-300 transition">
+                            <i class="fa-solid fa-lock mr-1.5"></i> Lock
+                        </button>
+                    </div>
+
+                    <!-- Price Setting Form -->
+                    <form onsubmit="savePriceSetting(event)" class="flex flex-col gap-5">
+                        <div>
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Hourly Table Rate (IDR)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">Rp</span>
+                                <input type="number" step="1000" id="setting-rate-input" required class="w-full bg-slate-50 border border-slate-300 rounded-2xl pl-12 pr-4 py-3.5 text-lg font-bold text-emerald-600 focus:outline-none focus:border-emerald-500 transition shadow-inner">
+                            </div>
+                            <p class="text-xs text-slate-400 mt-1.5">This hourly rate will automatically apply to all new table bookings.</p>
+                        </div>
+
+                        <!-- Change PIN Form -->
+                        <div class="pt-4 border-t border-slate-200">
+                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Change Owner Security PIN</label>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">New 4-Digit PIN</span>
+                                    <input type="password" maxlength="4" id="setting-new-pin" placeholder="e.g. 8888" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">Confirm PIN</span>
+                                    <input type="password" maxlength="4" id="setting-confirm-pin" placeholder="e.g. 8888" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-emerald-600/20 text-sm">
+                            Save Price & Security PIN
+                        </button>
+                    </form>
+
+                    <!-- Data Cleanup & Storage Purge Section -->
+                    <div class="pt-5 border-t border-slate-200">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Database & Storage Cleanup</label>
+                        <p class="text-xs text-slate-500 mb-3">Clear out old local booking records to keep tablet storage clean and responsive.</p>
+                        
+                        <div class="flex gap-3">
+                            <button onclick="purgeOldData(30)" class="flex-1 bg-amber-50 hover:bg-amber-100 border border-amber-300 text-amber-800 font-bold py-2.5 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-broom"></i>
+                                <span>Delete Data Older than 30 Days</span>
+                            </button>
+                            <button onclick="purgeOldData(0)" class="bg-red-50 hover:bg-red-100 border border-red-300 text-red-700 font-bold py-2.5 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i>
+                                <span>Reset All Data</span>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CREATE NEW BOOKING -->
+    <!-- ========================================== -->
+    <div id="modal-create-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                    <span class="text-emerald-600">🀄</span> New Mahjong Booking
+                </h3>
+                <button onclick="closeBookingModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleCreateBooking(event)" class="p-6 flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Customer Name</label>
+                    <input type="text" id="form-name" required placeholder="e.g. Budi Santoso" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Phone Number</label>
+                    <input type="tel" id="form-phone" required placeholder="e.g. 0812-3456-7890" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Select Table</label>
+                        <select id="form-table" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                            <option value="1">Table 1</option>
+                            <option value="2">Table 2</option>
+                            <option value="3">Table 3</option>
+                            <option value="4">Table 4</option>
+                            <option value="5">Table 5</option>
+                            <option value="6">Table 6</option>
+                            <option value="7">Table 7</option>
+                            <option value="8">Table 8</option>
+                            <option value="9">Table 9</option>
+                            <option value="10">Table 10</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Start Time (Minute exact)</label>
+                        <select id="form-start-slot" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                            <!-- JS injected 30-min interval times from 10:00 to 01:30 -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Play Duration</label>
+                    <div class="grid grid-cols-2 gap-3 items-center">
+                        <select id="form-duration-slots" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                            <option value="2">1.0 Hour (2 slots)</option>
+                            <option value="3">1.5 Hours (3 slots)</option>
+                            <option value="4" selected>2.0 Hours (4 slots)</option>
+                            <option value="5">2.5 Hours (5 slots)</option>
+                            <option value="6">3.0 Hours (6 slots)</option>
+                            <option value="7">3.5 Hours (7 slots)</option>
+                            <option value="8">4.0 Hours (8 slots)</option>
+                            <option value="10">5.0 Hours (10 slots)</option>
+                            <option value="12">6.0 Hours (12 slots)</option>
+                            <option value="16">8.0 Hours (16 slots)</option>
+                        </select>
+                        <span id="form-end-time-preview" class="text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200">Ends at: --:--</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Price Breakdown Card -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between mt-2">
+                    <div>
+                        <span class="text-xs text-slate-500 block font-semibold">Calculated Total</span>
+                        <span id="form-calculated-rate" class="text-[11px] text-emerald-700 font-bold">2 hrs × Rp 50.000/hr</span>
+                    </div>
+                    <span id="form-total-price" class="text-2xl font-black text-emerald-700">Rp 100.000</span>
+                </div>
+
+                <div class="flex gap-3 mt-2">
+                    <button type="button" onclick="closeBookingModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm">Lock Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: MANAGE / CONFIRM BOOKING -->
+    <!-- ========================================== -->
+    <!-- MODAL: CREATE NEW BOOKING (15-MIN INTERVALS) -->
+    <!-- ========================================== -->
+    <div id="modal-create-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-extrabold text-lg text-slate-900 flex items-center gap-2">
+                    <span class="text-emerald-600">🀄</span> New Mahjong Booking
+                </h3>
+                <button onclick="closeBookingModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleCreateBooking(event)" class="p-6 flex flex-col gap-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Customer Name</label>
+                    <input type="text" id="form-name" required placeholder="e.g. Budi Santoso" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Phone Number</label>
+                    <input type="tel" id="form-phone" required placeholder="e.g. 0812-3456-7890" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Select Table</label>
+                        <select id="form-table" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                            <option value="1">Table 1</option>
+                            <option value="2">Table 2</option>
+                            <option value="3">Table 3</option>
+                            <option value="4">Table 4</option>
+                            <option value="5">Table 5</option>
+                            <option value="6">Table 6</option>
+                            <option value="7">Table 7</option>
+                            <option value="8">Table 8</option>
+                            <option value="9">Table 9</option>
+                            <option value="10">Table 10</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Start Time (15-min precision)</label>
+                        <select id="form-start-slot" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                            <!-- JS injected 15-min interval times from 10:00 to 01:45 -->
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Play Duration</label>
+                    <div class="grid grid-cols-2 gap-3 items-center">
+                        <select id="form-duration-slots" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
+                            <option value="2">0.5 Hour (30m)</option>
+                            <option value="3">0.75 Hour (45m)</option>
+                            <option value="4" selected>1.0 Hour (60m)</option>
+                            <option value="5">1.25 Hours (1h 15m)</option>
+                            <option value="6">1.5 Hours (1h 30m)</option>
+                            <option value="7">1.75 Hours (1h 45m)</option>
+                            <option value="8">2.0 Hours (2h)</option>
+                            <option value="10">2.5 Hours (2h 30m)</option>
+                            <option value="12">3.0 Hours (3h)</option>
+                            <option value="14">3.5 Hours (3h 30m)</option>
+                            <option value="16">4.0 Hours (4h)</option>
+                            <option value="20">5.0 Hours (5h)</option>
+                            <option value="24">6.0 Hours (6h)</option>
+                        </select>
+                        <span id="form-end-time-preview" class="text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200">Ends at: --:--</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Price Breakdown Card -->
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between mt-2">
+                    <div>
+                        <span class="text-xs text-slate-500 block font-semibold" id="form-day-info">Rate Today</span>
+                        <span id="form-calculated-rate" class="text-[11px] text-emerald-700 font-bold">1 hr × Rp 50.000/hr</span>
+                    </div>
+                    <span id="form-total-price" class="text-2xl font-black text-emerald-700">Rp 50.000</span>
+                </div>
+
+                <div class="flex gap-3 mt-2">
+                    <button type="button" onclick="closeBookingModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancel</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm">Lock Booking</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: MANAGE / ADJUST / CONFIRM BOOKING -->
+    <!-- ========================================== -->
+    <div id="modal-manage-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <h3 class="font-extrabold text-lg text-slate-900" id="modal-manage-table">Table Details</h3>
+                    <p class="text-xs text-slate-500 font-mono" id="modal-manage-id">Booking ID: #---</p>
+                </div>
+                <button onclick="closeManageModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 flex flex-col gap-4">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2.5">
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Customer:</span>
+                        <span class="font-bold text-slate-900" id="modal-manage-name">-</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Phone:</span>
+                        <span class="font-mono text-slate-700 font-bold" id="modal-manage-phone">-</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Time Frame:</span>
+                        <span class="font-bold text-emerald-700" id="modal-manage-time">-</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Duration:</span>
+                        <span class="font-semibold text-slate-700" id="modal-manage-duration">-</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm border-t border-slate-200 pt-2">
+                        <span class="text-slate-500 font-medium">Base Booking Fee:</span>
+                        <span class="font-bold text-slate-800" id="modal-manage-base-price">Rp 0</span>
+                    </div>
+                    <div class="flex justify-between items-center text-sm">
+                        <span class="text-slate-500 font-medium">Status:</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold" id="modal-manage-status">-</span>
+                    </div>
+                </div>
+
+                <!-- Adjustment & Note Fields (Before Payment Confirmation) -->
+                <div id="payment-adjustment-section" class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-center justify-between text-xs font-bold text-amber-900">
+                        <span><i class="fa-solid fa-pen-to-square mr-1"></i> Adjust Money / Add Extras</span>
+                        <span class="text-[10px] text-amber-700 font-normal">(Optional cashier edit)</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <span class="text-[11px] font-semibold text-slate-600 block mb-1">Adjustment (IDR)</span>
+                            <input type="number" step="1000" id="modal-adjustment-amount" oninput="updateCalculatedFinalPrice()" placeholder="e.g. -10000 or +20000" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                        </div>
+                        <div>
+                            <span class="text-[11px] font-semibold text-slate-600 block mb-1">Note / Reason</span>
+                            <input type="text" id="modal-adjustment-note" placeholder="e.g. Snack, Member disc" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
+                    <span class="text-xs text-slate-600 font-bold uppercase">Final Payable Amount</span>
+                    <span class="text-2xl font-black text-emerald-600" id="modal-manage-final-price">Rp 0</span>
+                </div>
+
+                <!-- Action Controls for Cashier -->
+                <div id="modal-manage-actions" class="flex flex-col gap-2 mt-1">
+                    <button id="btn-confirm-pay" onclick="confirmBookingPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-check text-base"></i>
+                        <span>Confirm Payment & Mark Paid</span>
+                    </button>
+                    <button id="btn-cancel-book" onclick="cancelBooking()" class="w-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash"></i>
+                        <span>Cancel Booking & Free Table</span>
+                    </button>
+                </div>
+
+                <div id="modal-manage-locked-msg" class="hidden text-center p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-800 text-xs font-semibold">
+                    <i class="fa-solid fa-lock mr-1.5"></i> Payment confirmed. This booking is permanently locked.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Business hours: 10:00 to 02:00 next day = 16 hours = 64 slots of 15 mins
+        const TOTAL_SLOTS = 64;
+
+        let state = {
+            dayRates: {
+                Mon: 50000,
+                Tue: 50000,
+                Wed: 50000,
+                Thu: 50000,
+                Fri: 60000,
+                Sat: 75000,
+                Sun: 75000
+            },
+            ownerPin: "1234",
+            settingsUnlocked: false,
+            selectedDate: new Date().toISOString().split('T')[0],
+            activeBookingId: null,
+            bookings: []
+        };
+
+        // Format IDR Helper
+        function formatIDR(amount) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        // Helper to get day string (Mon, Tue, etc.) from date
+        function getDayKey(dateStr) {
+            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const d = new Date(dateStr + 'T00:00:00');
+            return days[d.getDay()];
+        }
+
+        function getHourlyRateForDate(dateStr) {
+            const dayKey = getDayKey(dateStr);
+            return state.dayRates[dayKey] || 50000;
+        }
+
+        // Map 15-min slot index (0 to 63) to HH:MM string
+        // 0 = 10:00, 1 = 10:15, 2 = 10:30, 3 = 10:45 ... 63 = 01:45
+        function slotIndexToTime(slotIdx) {
+            const startMinutes = 10 * 60 + (slotIdx * 15); // 10:00 AM base
+            const hours = Math.floor(startMinutes / 60) % 24;
+            const mins = startMinutes % 60;
+            const hh = hours < 10 ? '0' + hours : '' + hours;
+            const mm = mins < 10 ? '0' + mins : '' + mins;
+            return `${hh}:${mm}`;
+        }
+
+        // Initialize state from LocalStorage or seed defaults
+        function initStore() {
+            const savedRates = localStorage.getItem('mj_day_rates');
+            if (savedRates) {
+                try { state.dayRates = JSON.parse(savedRates); } catch(e){}
+            }
+
+            const savedPin = localStorage.getItem('mj_owner_pin');
+            if (savedPin) state.ownerPin = savedPin;
+
+            const savedBookings = localStorage.getItem('mj_bookings');
+            if (savedBookings) {
+                state.bookings = JSON.parse(savedBookings);
+            } else {
+                // Seed initial mock bookings for today
+                const today = new Date().toISOString().split('T')[0];
+                const todayRate = getHourlyRateForDate(today);
+                state.bookings = [
+                    {
+                        id: "BK-1001",
+                        date: today,
+                        table: 2,
+                        name: "Budi Santoso",
+                        phone: "0812-3456-7890",
+                        startSlot: 8, // 12:00
+                        durationSlots: 8, // 2 hrs (8 x 15-min = ends 14:00)
+                        hourlyRate: todayRate,
+                        basePrice: todayRate * 2,
+                        adjustmentAmount: 0,
+                        adjustmentNote: "",
+                        totalPrice: todayRate * 2,
+                        status: "BOOKED", // BOOKED or PAID
+                        createdTime: new Date().toISOString()
+                    },
+                    {
+                        id: "BK-1002",
+                        date: today,
+                        table: 5,
+                        name: "Siti Rahma",
+                        phone: "0819-8765-4321",
+                        startSlot: 32, // 18:00
+                        durationSlots: 12, // 3 hrs (ends 21:00)
+                        hourlyRate: todayRate,
+                        basePrice: todayRate * 3,
+                        adjustmentAmount: 10000,
+                        adjustmentNote: "Added 2 Green Teas",
+                        totalPrice: (todayRate * 3) + 10000,
+                        status: "PAID",
+                        createdTime: new Date().toISOString()
+                    }
+                ];
+                saveBookings();
+            }
+        }
+
+        function saveBookings() {
+            localStorage.setItem('mj_bookings', JSON.stringify(state.bookings));
+        }
+
+        // =========================================================================
+        // PAGE & UI SWITCHING
+        // =========================================================================
+        function switchPage(page) {
+            document.getElementById('page-book').classList.add('hidden');
+            document.getElementById('page-trans').classList.add('hidden');
+            document.getElementById('page-setting').classList.add('hidden');
+
+            document.getElementById('nav-book').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
+            document.getElementById('nav-trans').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
+            document.getElementById('nav-setting').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
+
+            if (page === 'book') {
+                document.getElementById('page-book').classList.remove('hidden');
+                document.getElementById('nav-book').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
+                renderTimeline();
+            } else if (page === 'trans') {
+                document.getElementById('page-trans').classList.remove('hidden');
+                document.getElementById('nav-trans').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
+                document.getElementById('trans-selected-date').value = state.selectedDate;
+                renderTransactions();
+            } else if (page === 'setting') {
+                document.getElementById('page-setting').classList.remove('hidden');
+                document.getElementById('nav-setting').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
+                updateSettingsUI();
+            }
+        }
+
+        function setupDates() {
+            const today = new Date();
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const nextDay = new Date(today);
+            nextDay.setDate(nextDay.getDate() + 2);
+
+            document.getElementById('selected-date').value = state.selectedDate;
+            document.getElementById('label-date-today').innerText = formatDateShort(today);
+            document.getElementById('label-date-tomorrow').innerText = formatDateShort(tomorrow);
+            document.getElementById('label-date-next').innerText = formatDateShort(nextDay);
+
+            updateHeaderRateDisplay();
+        }
+
+        function updateHeaderRateDisplay() {
+            const currentDayKey = getDayKey(state.selectedDate);
+            const rate = getHourlyRateForDate(state.selectedDate);
+            document.getElementById('current-day-label').innerText = `${currentDayKey} Rate`;
+            document.getElementById('current-rate-display').innerText = `${formatIDR(rate)} / hr`;
+            document.getElementById('day-rate-badge').innerText = `${currentDayKey}: ${formatIDR(rate)}/hr`;
+        }
+
+        function formatDateShort(dateObj) {
+            return dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function jumpToDate(offsetDays) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            state.selectedDate = d.toISOString().split('T')[0];
+            document.getElementById('selected-date').value = state.selectedDate;
+            handleDateChange(state.selectedDate);
+        }
+
+        function handleDateChange(dateStr) {
+            state.selectedDate = dateStr;
+            updateHeaderRateDisplay();
+            renderTimeline();
+        }
+
+        // =========================================================================
+        // TIMELINE GRID RENDERER (64 Slots of 15-min grouped by hourly labels)
+        // =========================================================================
+        function renderTimeline() {
+            const dateTitle = new Date(state.selectedDate + 'T00:00:00').toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+            document.getElementById('current-view-date-title').innerText = `Table Schedule (${dateTitle})`;
+
+            // Populate 16 hourly header columns (each spans 4 x 15-min slots)
+            const headersContainer = document.getElementById('hour-headers-container');
+            headersContainer.innerHTML = '';
+            for (let h = 0; h < 16; h++) {
+                const slotIndex = h * 4;
+                const timeLabel = slotIndexToTime(slotIndex);
+                const div = document.createElement('div');
+                div.style.gridColumn = "span 4";
+                div.className = `py-2.5 px-0.5 text-center font-extrabold text-xs border-r border-slate-200 bg-slate-100 text-slate-800 shadow-inner`;
+                div.innerHTML = `<span>${timeLabel}</span>`;
+                headersContainer.appendChild(div);
+            }
+
+            // Render 10 Tables
+            const tableContainer = document.getElementById('table-rows-container');
+            tableContainer.innerHTML = '';
+
+            const dayBookings = state.bookings.filter(b => b.date === state.selectedDate);
+
+            for (let t = 1; t <= 10; t++) {
+                const row = document.createElement('div');
+                row.className = "grid-timeline items-center min-h-[60px] bg-white hover:bg-slate-50/50 transition";
+
+                // Table sticky title cell
+                const titleCell = document.createElement('div');
+                titleCell.className = "table-sticky-col h-full p-3 font-extrabold text-sm text-slate-800 border-r border-slate-200 flex items-center gap-2 shadow-sm";
+                titleCell.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Table ${t}`;
+                row.appendChild(titleCell);
+
+                const tableBookings = dayBookings.filter(b => b.table === t);
+
+                let slot = 0;
+                while (slot < TOTAL_SLOTS) {
+                    const activeBooking = tableBookings.find(b => slot >= b.startSlot && slot < (b.startSlot + b.durationSlots));
+
+                    if (activeBooking) {
+                        if (slot === activeBooking.startSlot) {
+                            const blockSpan = activeBooking.durationSlots;
+                            const slotCell = document.createElement('div');
+                            slotCell.style.gridColumn = `span ${blockSpan}`;
+                            slotCell.className = "h-full p-1 cursor-pointer transition";
+                            
+                            const isPaid = activeBooking.status === "PAID";
+                            const bgStyle = isPaid 
+                                ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 text-white shadow-md" 
+                                : "bg-gradient-to-r from-amber-100 to-amber-200 border-amber-400 text-amber-900 shadow-sm";
+
+                            const startTimeStr = slotIndexToTime(activeBooking.startSlot);
+                            const endTimeStr = slotIndexToTime(activeBooking.startSlot + activeBooking.durationSlots);
+
+                            slotCell.innerHTML = `
+                                <div onclick="openManageModal('${activeBooking.id}')" class="${bgStyle} h-full border rounded-xl p-2 flex flex-col justify-between hover:scale-[0.99] transition overflow-hidden">
+                                    <div class="flex items-center justify-between text-xs font-bold gap-1">
+                                        <span class="truncate max-w-[120px]"><i class="fa-solid fa-user mr-1 text-[10px]"></i>${activeBooking.name}</span>
+                                        <span class="${isPaid ? 'bg-black/20 text-white' : 'bg-amber-300/80 text-amber-950'} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(activeBooking.totalPrice)}</span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-[11px] font-semibold opacity-95">
+                                        <span>${startTimeStr} - ${endTimeStr}</span>
+                                        <span class="font-extrabold text-[9px] uppercase tracking-wider ${isPaid ? 'bg-white/20' : 'bg-amber-400/40'} px-1 rounded shrink-0">${activeBooking.status}</span>
+                                    </div>
+                                </div>
+                            `;
+                            row.appendChild(slotCell);
+                            slot += blockSpan;
+                        } else {
+                            slot++;
+                        }
+                    } else {
+                        // Empty 15-min slot
+                        const emptyCell = document.createElement('div');
+                        const isHourBorder = (slot + 1) % 4 === 0;
+                        emptyCell.className = `h-full ${isHourBorder ? 'border-r border-slate-300' : 'border-r border-slate-100'} hover:bg-emerald-50/80 cursor-pointer transition flex items-center justify-center text-slate-300 hover:text-emerald-600 text-[10px]`;
+                        const targetSlot = slot;
+                        emptyCell.onclick = () => openBookingModalForSlot(t, targetSlot);
+                        emptyCell.innerHTML = `<i class="fa-solid fa-plus opacity-0 hover:opacity-100 transition"></i>`;
+                        row.appendChild(emptyCell);
+                        slot++;
+                    }
+                }
+
+                tableContainer.appendChild(row);
+            }
+        }
+
+        function openBookingModal() {
+            populateStartTimes();
+            calculateFormPrice();
+            document.getElementById('modal-create-booking').classList.remove('hidden');
+        }
+
+        function openBookingModalForSlot(tableNum, startSlot) {
+            document.getElementById('form-table').value = tableNum;
+            populateStartTimes();
+            document.getElementById('form-start-slot').value = startSlot;
+            calculateFormPrice();
+            document.getElementById('modal-create-booking').classList.remove('hidden');
+        }
+
+        function closeBookingModal() {
+            document.getElementById('modal-create-booking').classList.add('hidden');
+        }
+
+        function populateStartTimes() {
+            const select = document.getElementById('form-start-slot');
+            select.innerHTML = '';
+            for (let s = 0; s < TOTAL_SLOTS; s++) {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.innerText = slotIndexToTime(s);
+                select.appendChild(opt);
+            }
+        }
+
+        function calculateFormPrice() {
+            const startSlot = parseInt(document.getElementById('form-start-slot').value) || 0;
+            const durationSlots = parseInt(document.getElementById('form-duration-slots').value) || 4; // default 1 hour (4 slots)
+            
+            const hours = durationSlots * 0.25; // 1 slot = 15 mins = 0.25h
+            const dayRate = getHourlyRateForDate(state.selectedDate);
+            const total = hours * dayRate;
+            
+            const endSlot = startSlot + durationSlots;
+            const endTimeStr = slotIndexToTime(endSlot % TOTAL_SLOTS);
+
+            document.getElementById('form-day-info').innerText = `${getDayKey(state.selectedDate)} Rate (${formatIDR(dayRate)}/hr)`;
+            document.getElementById('form-end-time-preview').innerText = `Ends at: ${endTimeStr}`;
+            document.getElementById('form-calculated-rate').innerText = `${hours} hrs × ${formatIDR(dayRate)}/hr`;
+            document.getElementById('form-total-price').innerText = formatIDR(total);
+        }
+
+        function handleCreateBooking(e) {
+            e.preventDefault();
+            const name = document.getElementById('form-name').value.trim();
+            const phone = document.getElementById('form-phone').value.trim();
+            const table = parseInt(document.getElementById('form-table').value);
+            const startSlot = parseInt(document.getElementById('form-start-slot').value);
+            const durationSlots = parseInt(document.getElementById('form-duration-slots').value);
+
+            const endSlot = startSlot + durationSlots;
+            if (endSlot > TOTAL_SLOTS) {
+                showCustomToast("Booking duration exceeds closing time (02:00 AM).", "error");
+                return;
+            }
+
+            // Check overlap
+            const existingBookings = state.bookings.filter(b => b.date === state.selectedDate && b.table === table);
+            for (let b of existingBookings) {
+                const bEnd = b.startSlot + b.durationSlots;
+                if (startSlot < bEnd && endSlot > b.startSlot) {
+                    showCustomToast(`Table ${table} is already booked during ${slotIndexToTime(b.startSlot)} - ${slotIndexToTime(bEnd)}`, "error");
+                    return;
+                }
+            }
+
+            const hours = durationSlots * 0.25;
+            const dayRate = getHourlyRateForDate(state.selectedDate);
+            const basePrice = hours * dayRate;
+
+            const newBooking = {
+                id: "BK-" + Math.floor(1000 + Math.random() * 9000),
+                date: state.selectedDate,
+                table: table,
+                name: name,
+                phone: phone,
+                startSlot: startSlot,
+                durationSlots: durationSlots,
+                hourlyRate: dayRate,
+                basePrice: basePrice,
+                adjustmentAmount: 0,
+                adjustmentNote: "",
+                totalPrice: basePrice,
+                status: "BOOKED",
+                createdTime: new Date().toISOString()
+            };
+
+            state.bookings.push(newBooking);
+            saveBookings();
+            closeBookingModal();
+            renderTimeline();
+            showCustomToast(`Table ${table} locked for ${name}!`, "success");
+
+            document.getElementById('form-name').value = '';
+            document.getElementById('form-phone').value = '';
+        }
+
+        function openManageModal(bookingId) {
+            const booking = state.bookings.find(b => b.id === bookingId);
+            if (!booking) return;
+
+            state.activeBookingId = bookingId;
+
+            const startStr = slotIndexToTime(booking.startSlot);
+            const endStr = slotIndexToTime(booking.startSlot + booking.durationSlots);
+            const durationHrs = booking.durationSlots * 0.25;
+
+            document.getElementById('modal-manage-id').innerText = `Booking ID: #${booking.id}`;
+            document.getElementById('modal-manage-table').innerText = `Table ${booking.table} Details`;
+            document.getElementById('modal-manage-name').innerText = booking.name;
+            document.getElementById('modal-manage-phone').innerText = booking.phone;
+            document.getElementById('modal-manage-time').innerText = `${startStr} to ${endStr} (${booking.date})`;
+            document.getElementById('modal-manage-duration').innerText = `${durationHrs} Hours @ ${formatIDR(booking.hourlyRate)}/hr`;
+            document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.basePrice || booking.totalPrice);
+
+            document.getElementById('modal-adjustment-amount').value = booking.adjustmentAmount || '';
+            document.getElementById('modal-adjustment-note').value = booking.adjustmentNote || '';
+
+            updateCalculatedFinalPrice();
+
+            const statusBadge = document.getElementById('modal-manage-status');
+            const actionsDiv = document.getElementById('modal-manage-actions');
+            const lockedMsg = document.getElementById('modal-manage-locked-msg');
+            const adjSection = document.getElementById('payment-adjustment-section');
+
+            if (booking.status === 'PAID') {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+                statusBadge.innerText = "PAID & CONFIRMED";
+                actionsDiv.classList.add('hidden');
+                adjSection.classList.add('hidden');
+                lockedMsg.classList.remove('hidden');
+            } else {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300";
+                statusBadge.innerText = "BOOKED (UNPAID)";
+                actionsDiv.classList.remove('hidden');
+                adjSection.classList.remove('hidden');
+                lockedMsg.classList.add('hidden');
+            }
+
+            document.getElementById('modal-manage-booking').classList.remove('hidden');
+        }
+
+        function updateCalculatedFinalPrice() {
+            if (!state.activeBookingId) return;
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            const base = booking.basePrice || booking.totalPrice;
+            const adjInput = parseFloat(document.getElementById('modal-adjustment-amount').value) || 0;
+            const finalPayable = Math.max(0, base + adjInput);
+
+            document.getElementById('modal-manage-final-price').innerText = formatIDR(finalPayable);
+        }
+
+        function closeManageModal() {
+            document.getElementById('modal-manage-booking').classList.add('hidden');
+        }
+
+        function confirmBookingPayment() {
+            if (!state.activeBookingId) return;
+
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (booking) {
+                const adjAmount = parseFloat(document.getElementById('modal-adjustment-amount').value) || 0;
+                const adjNote = document.getElementById('modal-adjustment-note').value.trim();
+                const base = booking.basePrice || booking.totalPrice;
+
+                booking.adjustmentAmount = adjAmount;
+                booking.adjustmentNote = adjNote;
+                booking.totalPrice = Math.max(0, base + adjAmount);
+                booking.status = "PAID";
+                booking.confirmedAt = new Date().toISOString();
+
+                saveBookings();
+                closeManageModal();
+                renderTimeline();
+                showCustomToast(`Payment confirmed! ${formatIDR(booking.totalPrice)} logged.`, "success");
+            }
+        }
+
+        function cancelBooking() {
+            if (!state.activeBookingId) return;
+
+            state.bookings = state.bookings.filter(b => b.id !== state.activeBookingId);
+            saveBookings();
+            closeManageModal();
+            renderTimeline();
+            showCustomToast("Booking cancelled and table unlocked.", "info");
+        }
+
+        function renderTransactions() {
+            const filterDate = document.getElementById('trans-selected-date').value || state.selectedDate;
+            const paidBookings = state.bookings.filter(b => b.date === filterDate && b.status === "PAID");
+
+            const tbody = document.getElementById('trans-table-body');
+            tbody.innerHTML = '';
+
+            let totalRev = 0;
+            let totalHours = 0;
+
+            if (paidBookings.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="py-8 text-center text-slate-400 font-medium">
+                            <i class="fa-solid fa-receipt text-3xl mb-2 block opacity-40"></i>
+                            No confirmed payments found for ${filterDate}
+                        </td>
+                    </tr>
+                `;
+            } else {
+                paidBookings.forEach(b => {
+                    const durationHrs = b.durationSlots * 0.25;
+                    totalRev += b.totalPrice;
+                    totalHours += durationHrs;
+
+                    const startStr = slotIndexToTime(b.startSlot);
+                    const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
+
+                    const adjText = b.adjustmentAmount ? `${formatIDR(b.adjustmentAmount)} (${b.adjustmentNote || 'N/A'})` : '-';
+
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                    tr.innerHTML = `
+                        <td class="py-3.5 px-4 font-mono text-xs font-bold text-slate-500">#${b.id}</td>
+                        <td class="py-3.5 px-4 font-bold text-slate-900">${b.name}</td>
+                        <td class="py-3.5 px-4 font-mono text-slate-600 text-xs">${b.phone}</td>
+                        <td class="py-3.5 px-4 font-bold text-emerald-700">Table ${b.table}</td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-700">${startStr} - ${endStr}</td>
+                        <td class="py-3.5 px-4 text-slate-600">${durationHrs} hrs</td>
+                        <td class="py-3.5 px-4 text-right font-mono text-slate-500">${formatIDR(b.basePrice || b.totalPrice)}</td>
+                        <td class="py-3.5 px-4 text-right font-mono text-xs ${b.adjustmentAmount < 0 ? 'text-emerald-600' : 'text-amber-700'}">${adjText}</td>
+                        <td class="py-3.5 px-4 text-right font-mono font-black text-emerald-700">${formatIDR(b.totalPrice)}</td>
+                        <td class="py-3.5 px-4 text-center">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">PAID</span>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+
+            document.getElementById('trans-daily-total').innerText = formatIDR(totalRev);
+            document.getElementById('trans-daily-count').innerText = `${paidBookings.length} Paid`;
+            document.getElementById('trans-daily-hours').innerText = `${totalHours} hrs`;
+            document.getElementById('trans-count-badge').innerText = `${paidBookings.length} items`;
+        }
+
+        function exportTransactionsToExcel() {
+            const filterDate = document.getElementById('trans-selected-date').value || state.selectedDate;
+            const paidBookings = state.bookings.filter(b => b.date === filterDate && b.status === "PAID");
+
+            if (paidBookings.length === 0) {
+                showCustomToast("No confirmed transactions available to export for this date.", "error");
+                return;
+            }
+
+            const excelData = paidBookings.map(b => ({
+                "Receipt ID": b.id,
+                "Date": b.date,
+                "Customer Name": b.name,
+                "Phone Number": b.phone,
+                "Table Number": `Table ${b.table}`,
+                "Start Time": slotIndexToTime(b.startSlot),
+                "End Time": slotIndexToTime(b.startSlot + b.durationSlots),
+                "Duration (Hrs)": b.durationSlots * 0.25,
+                "Hourly Rate (IDR)": b.hourlyRate,
+                "Base Booking Price (IDR)": b.basePrice || b.totalPrice,
+                "Adjustment Amount (IDR)": b.adjustmentAmount || 0,
+                "Adjustment Reason": b.adjustmentNote || "",
+                "Final Paid Amount (IDR)": b.totalPrice,
+                "Payment Status": "CONFIRMED_PAID"
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Daily Transactions");
+
+            const fileName = `Mahjong_Transactions_${filterDate}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+            showCustomToast(`Exported ${paidBookings.length} items to ${fileName}`, "success");
+        }
+
+        function updateSettingsUI() {
+            if (state.settingsUnlocked) {
+                document.getElementById('setting-pin-lock').classList.add('hidden');
+                document.getElementById('setting-panel').classList.remove('hidden');
+
+                // Populate Mon to Sun rates
+                ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
+                    const inp = document.getElementById(`rate-${day}`);
+                    if (inp) inp.value = state.dayRates[day] || 50000;
+                });
+            } else {
+                document.getElementById('setting-pin-lock').classList.remove('hidden');
+                document.getElementById('setting-panel').classList.add('hidden');
+            }
+        }
+
+        function handlePinSubmit(e) {
+            e.preventDefault();
+            const pinVal = document.getElementById('pin-input').value;
+            if (pinVal === state.ownerPin) {
+                state.settingsUnlocked = true;
+                document.getElementById('pin-input').value = '';
+                document.getElementById('pin-error-msg').classList.add('hidden');
+                updateSettingsUI();
+                showCustomToast("Owner settings unlocked.", "success");
+            } else {
+                const err = document.getElementById('pin-error-msg');
+                err.innerText = "Incorrect Security PIN. Try again.";
+                err.classList.remove('hidden');
+            }
+        }
+
+        function lockSettings() {
+            state.settingsUnlocked = false;
+            updateSettingsUI();
+        }
+
+        function savePriceSetting(e) {
+            e.preventDefault();
+
+            const newDayRates = {};
+            ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
+                const val = parseFloat(document.getElementById(`rate-${day}`).value);
+                newDayRates[day] = val > 0 ? val : 50000;
+            });
+
+            state.dayRates = newDayRates;
+            localStorage.setItem('mj_day_rates', JSON.stringify(newDayRates));
+            updateHeaderRateDisplay();
+
+            const newPin = document.getElementById('setting-new-pin').value.trim();
+            const confirmPin = document.getElementById('setting-confirm-pin').value.trim();
+
+            if (newPin && newPin.length === 4) {
+                if (newPin === confirmPin) {
+                    state.ownerPin = newPin;
+                    localStorage.setItem('mj_owner_pin', newPin);
+                    document.getElementById('setting-new-pin').value = '';
+                    document.getElementById('setting-confirm-pin').value = '';
+                    showCustomToast("Weekly rates & Security PIN updated!", "success");
+                } else {
+                    showCustomToast("New PINs do not match.", "error");
+                    return;
+                }
+            } else {
+                showCustomToast("Weekly hourly rates saved successfully!", "success");
+            }
+        }
+
+        // Automatic/Manual Data Purge Logic for local storage space maintenance
+        function purgeOldData(daysOld = 30) {
+            if (daysOld === 0) {
+                state.bookings = [];
+                saveBookings();
+                showCustomToast("All booking history has been reset.", "info");
+            } else {
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - daysOld);
+                const cutoffStr = cutoff.toISOString().split('T')[0];
+                
+                const beforeCount = state.bookings.length;
+                state.bookings = state.bookings.filter(b => b.date >= cutoffStr);
+                const removedCount = beforeCount - state.bookings.length;
+                
+                saveBookings();
+                showCustomToast(`Removed ${removedCount} record(s) older than ${daysOld} days.`, "info");
+            }
+
+            renderTimeline();
+            renderTransactions();
+        }
+
+        // Custom Notification Toast
+        function showCustomToast(msg, type = 'info') {
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-slate-800';
+            toast.className = `${bgClass} text-white text-xs font-bold px-4 py-3 rounded-xl shadow-xl fixed bottom-6 right-6 z-50 flex items-center gap-2 animate-bounce`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${msg}`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        window.onload = function() {
+            initStore();
+            setupDates();
+            renderTimeline();
+        };
+    </script>
+</body>
+</html>
