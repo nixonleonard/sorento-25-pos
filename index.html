@@ -92,6 +92,10 @@
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold" id="current-day-label">Tarif Hari Ini</span>
                 <span class="text-sm font-extrabold text-emerald-600" id="current-rate-display">Rp 50.000 / jam</span>
             </div>
+            <button onclick="lockApp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-2 rounded-xl font-bold border border-slate-300 transition flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-lock text-amber-600"></i>
+                <span class="hidden md:inline">Kunci Layar</span>
+            </button>
             <button onclick="openBookingModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20 text-sm">
                 <i class="fa-solid fa-plus text-base"></i>
                 <span>Tambah Booking</span>
@@ -327,14 +331,24 @@
                         </div>
 
                         <div class="pt-4 border-t border-slate-200">
-                            <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 mb-3">2. Keamanan PIN Pemilik</h3>
+                            <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 mb-3">2. Keamanan PIN Pemilik & Kasir</h3>
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">PIN Akses Kasir Baru (4 Digit)</span>
+                                    <input type="password" maxlength="4" id="setting-new-cashier-pin" placeholder="Contoh: 1234" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                                <div>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">Konfirmasi PIN Kasir</span>
+                                    <input type="password" maxlength="4" id="setting-confirm-cashier-pin" placeholder="Contoh: 1234" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                                </div>
+                            </div>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
-                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">PIN Baru (4 Digit)</span>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">PIN Pemilik Baru (4 Digit)</span>
                                     <input type="password" maxlength="4" id="setting-new-pin" placeholder="Contoh: 8888" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
                                 </div>
                                 <div>
-                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">Konfirmasi PIN</span>
+                                    <span class="text-[11px] text-slate-500 block mb-1 font-semibold">Konfirmasi PIN Pemilik</span>
                                     <input type="password" maxlength="4" id="setting-confirm-pin" placeholder="Contoh: 8888" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-emerald-500 transition">
                                 </div>
                             </div>
@@ -635,6 +649,42 @@
         </div>
     </div>
 
+    <!-- MODAL KUNCI AKSES APLIKASI (PIN KASIR) -->
+    <div id="modal-app-lock" class="fixed inset-0 bg-slate-900/80 modal-blur z-50 flex items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-8 shadow-2xl text-center">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-4">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900">Aplikasi Terkunci</h2>
+            <p class="text-xs text-slate-500 mt-1 mb-6">Masukkan PIN 4 digit untuk membuka akses POS Kasir.</p>
+
+            <form onsubmit="handleCashierPinSubmit(event)" class="flex flex-col items-center gap-4">
+                <input type="password" maxlength="4" id="app-pin-input" placeholder="••••" required class="w-40 text-center tracking-[1em] text-2xl font-black bg-slate-50 border border-slate-300 rounded-2xl py-3 text-emerald-600 focus:outline-none focus:border-emerald-500 transition shadow-inner">
+                <p id="app-pin-err" class="text-xs text-rose-500 font-bold hidden"></p>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm mt-2">
+                    Buka Akses POS
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PENGUNCI OFFLINE (MEMBUTUHKAN KONEKSI CLOUD) -->
+    <div id="modal-offline-lock" class="fixed inset-0 bg-slate-950/85 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-rose-200 rounded-3xl w-full max-w-md p-8 shadow-2xl text-center">
+            <div class="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-3xl mx-auto mb-4 animate-bounce">
+                <i class="fa-solid fa-wifi"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900">Koneksi Cloud Terputus</h2>
+            <p class="text-xs text-slate-500 mt-2 mb-6 leading-relaxed">
+                Aplikasi ini membutuhkan sambungan database cloud aktif untuk sinkronisasi multi-perangkat. Harap periksa koneksi internet/Wi-Fi Anda.
+            </p>
+            <button onclick="retryCloudConnection()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 rounded-xl transition shadow-md shadow-rose-600/20 text-sm flex items-center justify-center gap-2">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span>Coba Hubungkan Ulang</span>
+            </button>
+        </div>
+    </div>
+
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyAYUwB6v9vjRf4bOHqR1zF8KRykAa1j84U",
@@ -650,8 +700,10 @@
 
         let state = {
             dayRates: { Mon: 50000, Tue: 50000, Wed: 50000, Thu: 50000, Fri: 60000, Sat: 75000, Sun: 75000 },
+            cashierPin: "1234",
             ownerPin: "1234",
             settingsUnlocked: false,
+            appUnlocked: false,
             selectedDate: new Date().toISOString().split('T')[0],
             activeBookingId: null,
             bookings: [],
@@ -676,6 +728,44 @@
         let db = null;
         let auth = null;
 
+        function lockApp() {
+            state.appUnlocked = false;
+            const input = document.getElementById('app-pin-input');
+            if (input) input.value = '';
+            document.getElementById('app-pin-err')?.classList.add('hidden');
+            document.getElementById('modal-app-lock')?.classList.remove('hidden');
+        }
+
+        function handleCashierPinSubmit(e) {
+            e.preventDefault();
+            const inputPin = document.getElementById('app-pin-input')?.value;
+            if (inputPin === state.cashierPin) {
+                state.appUnlocked = true;
+                document.getElementById('modal-app-lock')?.classList.add('hidden');
+                document.getElementById('app-pin-err')?.classList.add('hidden');
+                showCustomToast("Akses aplikasi kasir terbuka.", "success");
+            } else {
+                const err = document.getElementById('app-pin-err');
+                if (err) {
+                    err.innerText = "PIN Akses Kasir salah. Coba lagi.";
+                    err.classList.remove('hidden');
+                }
+            }
+        }
+
+        function showOfflineLock() {
+            document.getElementById('modal-offline-lock')?.classList.remove('hidden');
+        }
+
+        function hideOfflineLock() {
+            document.getElementById('modal-offline-lock')?.classList.add('hidden');
+        }
+
+        function retryCloudConnection() {
+            showCustomToast("Menghubungkan ulang ke Firebase Cloud...", "info");
+            initFirebase();
+        }
+
         function initFirebase() {
             try {
                 if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
@@ -686,16 +776,17 @@
                     auth.signInAnonymously().then(() => {
                         state.isCloudOnline = true;
                         updateSyncBadge(true);
+                        hideOfflineLock();
                         subscribeCloudData();
                     }).catch(err => {
-                        console.warn("Auth Firebase gagal, beralih ke lokal storage:", err);
+                        console.warn("Auth Firebase gagal, memblokir penggunaan offline:", err);
                         fallbackToLocalStorage();
                     });
                 } else {
                     fallbackToLocalStorage();
                 }
             } catch (e) {
-                console.warn("Inisialisasi Firebase gagal, menggunakan mode offline:", e);
+                console.warn("Inisialisasi Firebase gagal, memblokir penggunaan offline:", e);
                 fallbackToLocalStorage();
             }
         }
@@ -707,8 +798,8 @@
                 badge.className = "text-xs text-emerald-600 font-semibold flex items-center gap-1.5";
                 badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Tersambung Cloud Sync`;
             } else {
-                badge.className = "text-xs text-amber-600 font-semibold flex items-center gap-1.5";
-                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Offline Lokal`;
+                badge.className = "text-xs text-rose-600 font-semibold flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Cloud Terputus`;
             }
         }
 
@@ -716,6 +807,7 @@
             state.isCloudOnline = false;
             updateSyncBadge(false);
             initLocalStore();
+            showOfflineLock(); // Wajibkan koneksi Cloud
         }
 
         function subscribeCloudData() {
@@ -727,12 +819,14 @@
                 renderTransactions();
             }, err => {
                 console.error("Gagal mendengarkan data booking cloud:", err);
+                fallbackToLocalStorage();
             });
 
             db.collection("settings").doc("config").onSnapshot(doc => {
                 if (doc.exists) {
                     const data = doc.data();
                     if (data.dayRates) state.dayRates = data.dayRates;
+                    if (data.cashierPin) state.cashierPin = data.cashierPin;
                     if (data.ownerPin) state.ownerPin = data.ownerPin;
                     if (data.products) state.products = data.products;
                     if (data.discountRules) state.discountRules = data.discountRules;
@@ -760,6 +854,7 @@
             if (state.isCloudOnline && db) {
                 db.collection("settings").doc("config").set({
                     dayRates: state.dayRates,
+                    cashierPin: state.cashierPin,
                     ownerPin: state.ownerPin,
                     products: state.products,
                     discountRules: state.discountRules,
@@ -773,6 +868,9 @@
         function initLocalStore() {
             const savedRates = localStorage.getItem('mj_day_rates_v7');
             if (savedRates) { try { state.dayRates = JSON.parse(savedRates); } catch(e){} }
+
+            const savedCashierPin = localStorage.getItem('mj_cashier_pin_v7');
+            if (savedCashierPin) state.cashierPin = savedCashierPin;
 
             const savedPin = localStorage.getItem('mj_owner_pin_v7');
             if (savedPin) state.ownerPin = savedPin;
@@ -796,6 +894,7 @@
 
         function saveLocalSettings() {
             localStorage.setItem('mj_day_rates_v7', JSON.stringify(state.dayRates));
+            localStorage.setItem('mj_cashier_pin_v7', state.cashierPin);
             localStorage.setItem('mj_owner_pin_v7', state.ownerPin);
             localStorage.setItem('mj_products_v7', JSON.stringify(state.products));
             localStorage.setItem('mj_discount_rules_v7', JSON.stringify(state.discountRules));
@@ -1636,6 +1735,20 @@
 
             state.dayRates = newDayRates;
 
+            const newCashierPin = document.getElementById('setting-new-cashier-pin')?.value.trim();
+            const confirmCashierPin = document.getElementById('setting-confirm-cashier-pin')?.value.trim();
+
+            if (newCashierPin && newCashierPin.length === 4) {
+                if (newCashierPin === confirmCashierPin) {
+                    state.cashierPin = newCashierPin;
+                    if (document.getElementById('setting-new-cashier-pin')) document.getElementById('setting-new-cashier-pin').value = '';
+                    if (document.getElementById('setting-confirm-cashier-pin')) document.getElementById('setting-confirm-cashier-pin').value = '';
+                } else {
+                    showCustomToast("PIN Kasir Baru dan Konfirmasi tidak cocok.", "error");
+                    return;
+                }
+            }
+
             const newPin = document.getElementById('setting-new-pin')?.value.trim();
             const confirmPin = document.getElementById('setting-confirm-pin')?.value.trim();
 
@@ -1646,7 +1759,7 @@
                     if (document.getElementById('setting-confirm-pin')) document.getElementById('setting-confirm-pin').value = '';
                     showCustomToast("Tarif mingguan & PIN Keamanan berhasil diperbarui!", "success");
                 } else {
-                    showCustomToast("PIN Baru dan Konfirmasi PIN tidak cocok.", "error");
+                    showCustomToast("PIN Pemilik Baru dan Konfirmasi PIN tidak cocok.", "error");
                     return;
                 }
             } else {
@@ -1789,8 +1902,8 @@
             initFirebase();
             setupDates();
             renderTimeline();
+            lockApp(); // Selalu buka layar kunci kasir saat dimuat pertama kali
         };
     </script>
 </body>
 </html>
-```eor
