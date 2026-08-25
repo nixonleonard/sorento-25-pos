@@ -13,22 +13,17 @@
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Firebase SDK (Compat Version 10.12.0) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['Plus Jakarta Sans', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#ecfdf5',
-                            100: '#d1fae5',
-                            500: '#10b981',
-                            600: '#059669',
-                            700: '#047857',
-                            800: '#065f46',
-                        }
                     }
                 }
             }
@@ -36,33 +31,27 @@
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        /* Custom smooth scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* 10:00 hingga 02:00 = 16 jam = 64 kolom @ 15 menit */
         .grid-timeline {
             display: grid;
-            grid-template-columns: 110px repeat(64, minmax(32px, 1fr));
+            grid-template-columns: 110px repeat(64, minmax(28px, 1fr));
         }
-
         .table-sticky-col {
             position: sticky;
             left: 0;
             z-index: 20;
             background-color: #ffffff;
         }
-
         .header-sticky-row {
             position: sticky;
             top: 0;
             z-index: 30;
             background-color: #f8fafc;
         }
-
         .modal-blur {
             backdrop-filter: blur(6px);
         }
@@ -70,40 +59,35 @@
 </head>
 <body class="h-full flex flex-col bg-slate-100 text-slate-800 overflow-hidden select-none">
 
-    <!-- Header Navigasi Utama -->
+    <!-- Navigation Header -->
     <header class="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between shadow-sm shrink-0">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-emerald-500/20">
                 🀄
             </div>
             <div>
-                <h1 class="font-extrabold text-lg text-slate-900 leading-tight">POS Mahjong Club</h1>
-                <p class="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Terminal Kasir
-                </p>
+                <h1 class="font-extrabold text-lg text-slate-900 leading-tight">Mahjong Club POS</h1>
+                <div id="sync-status-badge" class="text-xs text-amber-600 font-semibold flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Offline Lokal
+                </div>
             </div>
         </div>
 
-        <!-- Tab Navigasi -->
         <nav class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-sm font-semibold">
             <button id="nav-book" onclick="switchPage('book')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm">
                 <i class="fa-solid fa-calendar-days"></i>
-                <span class="hidden md:inline">Jadwal Meja (10:00 - 02:00)</span>
-                <span class="md:hidden">Jadwal</span>
+                <span>Jadwal Meja (10:00 - 02:00)</span>
             </button>
             <button id="nav-trans" onclick="switchPage('trans')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900">
                 <i class="fa-solid fa-receipt"></i>
-                <span class="hidden md:inline">Transaksi Harian</span>
-                <span class="md:hidden">Transaksi</span>
+                <span>Riwayat Transaksi</span>
             </button>
             <button id="nav-setting" onclick="switchPage('setting')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900">
                 <i class="fa-solid fa-shield-halved"></i>
-                <span class="hidden md:inline">Pengaturan Pemilik</span>
-                <span class="md:hidden">Pengaturan</span>
+                <span>Pengaturan Pemilik</span>
             </button>
         </nav>
 
-        <!-- Informasi Tarif & Pemesanan Baru -->
         <div class="flex items-center gap-3">
             <div class="hidden sm:flex flex-col text-right bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl">
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold" id="current-day-label">Tarif Hari Ini</span>
@@ -111,23 +95,21 @@
             </div>
             <button onclick="openBookingModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20 text-sm">
                 <i class="fa-solid fa-plus text-base"></i>
-                <span>Pemesanan Baru</span>
+                <span>Tambah Booking</span>
             </button>
         </div>
     </header>
 
     <main class="flex-1 flex overflow-hidden">
 
-        <!-- HALAMAN 1: JADWAL PEMESANAN MEJA -->
+        <!-- HALAMAN 1: JADWAL MEJA (TIMELINE) -->
         <div id="page-book" class="flex-1 flex w-full h-full overflow-hidden">
-            <!-- Sidebar Kiri - Pemilih Tanggal -->
             <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Pilih Tanggal Pemesanan</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Pilih Tanggal Booking</label>
                     <input type="date" id="selected-date" onchange="handleDateChange(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
                 </div>
 
-                <!-- Tombol Pintas Tanggal -->
                 <div class="flex flex-col gap-1.5">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Pintas Tanggal</span>
                     <button onclick="jumpToDate(0)" id="btn-date-today" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800">
@@ -144,16 +126,15 @@
                     </button>
                 </div>
 
-                <!-- Legenda Status -->
                 <div class="mt-auto bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex flex-col gap-2.5 text-xs shadow-sm">
-                    <span class="font-bold text-slate-600 uppercase tracking-wider text-[10px]">Legenda Status</span>
+                    <span class="font-bold text-slate-600 uppercase tracking-wider text-[10px]">Keterangan Status</span>
                     <div class="flex items-center gap-2">
                         <span class="w-3.5 h-3.5 rounded-md bg-amber-100 border border-amber-400"></span>
                         <span class="text-slate-700 font-semibold">Dibooking (Belum Bayar)</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="w-3.5 h-3.5 rounded-md bg-emerald-600 border border-emerald-500"></span>
-                        <span class="text-slate-700 font-semibold">Selesai & Lunas</span>
+                        <span class="text-slate-700 font-semibold">Selesai / Lunas</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="w-3.5 h-3.5 rounded-md bg-rose-100 border border-rose-300"></span>
@@ -161,24 +142,19 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="w-3.5 h-3.5 rounded-md bg-slate-200 border border-slate-300"></span>
-                        <span class="text-slate-400">Waktu Sudah Lewat</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-md bg-white border border-slate-300"></span>
-                        <span class="text-slate-500">Slot Tersedia</span>
+                        <span class="text-slate-400">Waktu Terlewat</span>
                     </div>
                     <div class="pt-2 border-t border-slate-200 text-[11px] text-slate-500 font-medium">
-                        <i class="fa-solid fa-clock text-slate-400 mr-1"></i> Jam Operasional: 10:00 - 02:00
+                        <i class="fa-solid fa-clock text-slate-400 mr-1"></i> Jam Operasional: 10:00 - 02:00 AM
                     </div>
                 </div>
             </aside>
 
-            <!-- Area utama Grid Timeline -->
             <section class="flex-1 flex flex-col overflow-hidden bg-white">
                 <div class="bg-slate-50 border-b border-slate-200 px-6 py-3.5 flex items-center justify-between shrink-0">
                     <div>
                         <h2 class="text-base font-extrabold text-slate-900" id="current-view-date-title">Jadwal Meja</h2>
-                        <p class="text-xs text-slate-500">Klik slot kosong yang tersedia atau pesanan aktif untuk mengelola</p>
+                        <p class="text-xs text-slate-500">Klik slot kosong atau blok pemesanan untuk mengelola</p>
                     </div>
                     <div class="flex items-center gap-3 text-xs font-semibold">
                         <div class="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm">
@@ -193,7 +169,7 @@
                 </div>
 
                 <div class="flex-1 overflow-auto relative">
-                    <div class="min-w-[2400px] pb-12">
+                    <div class="min-w-[2200px] pb-12">
                         <div class="grid-timeline border-b border-slate-200 header-sticky-row shadow-sm">
                             <div class="table-sticky-col p-3 font-extrabold text-xs text-slate-500 uppercase tracking-wider border-r border-slate-200 flex items-center justify-center">
                                 Meja
@@ -201,45 +177,39 @@
                             <div id="hour-headers-container" class="contents"></div>
                         </div>
 
-                        <div id="table-rows-container" class="divide-y divide-slate-200">
-                            <!-- JS mengisi baris Meja 1 - 10 secara dinamis -->
-                        </div>
+                        <div id="table-rows-container" class="divide-y divide-slate-200"></div>
                     </div>
                 </div>
             </section>
         </div>
 
-        <!-- HALAMAN 2: TRANSAKSI HARIAN -->
+        <!-- HALAMAN 2: RIWAYAT TRANSAKSI HARIAN -->
         <div id="page-trans" class="flex-1 flex w-full h-full overflow-hidden hidden">
             <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0">
-                <div class="flex flex-col gap-2">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">Rentang Tanggal Transaksi</label>
-                    <div>
-                        <span class="text-[11px] font-semibold text-slate-500 block mb-1">Dari Tanggal</span>
-                        <input type="date" id="trans-start-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
-                    </div>
-                    <div>
-                        <span class="text-[11px] font-semibold text-slate-500 block mb-1">Sampai Tanggal</span>
-                        <input type="date" id="trans-end-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
-                    </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Dari Tanggal</label>
+                    <input type="date" id="trans-start-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm mb-3">
+                    
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Sampai Tanggal</label>
+                    <input type="date" id="trans-end-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
                 </div>
 
                 <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border border-emerald-500 p-4 rounded-2xl flex flex-col gap-3 shadow-md">
                     <div class="text-xs font-bold uppercase tracking-wider flex items-center justify-between text-emerald-100">
-                        <span>Pendapatan Harian</span>
+                        <span>Ringkasan Omzet</span>
                         <i class="fa-solid fa-wallet text-white text-base"></i>
                     </div>
                     <div>
-                        <span class="text-xs text-emerald-100 block font-medium">Total Omzet Lunas</span>
+                        <span class="text-xs text-emerald-100 block font-medium">Total Pendapatan Lunas</span>
                         <span class="text-2xl font-black text-white" id="trans-daily-total">Rp 0</span>
                     </div>
                     <div class="grid grid-cols-2 gap-2 pt-2 border-t border-emerald-500/50 text-xs">
                         <div>
-                            <span class="text-emerald-100 block text-[10px]">Transaksi Lunas</span>
+                            <span class="text-emerald-100 block text-[10px]">Selesai / Lunas</span>
                             <span class="font-bold text-white" id="trans-daily-count">0 Selesai</span>
                         </div>
                         <div>
-                            <span class="text-emerald-100 block text-[10px]">Total Jam Main</span>
+                            <span class="text-emerald-100 block text-[10px]">Total Waktu Main</span>
                             <span class="font-bold text-white" id="trans-daily-hours">0 Jam</span>
                         </div>
                     </div>
@@ -247,7 +217,7 @@
 
                 <button onclick="exportTransactionsToExcel()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition shadow-md shadow-emerald-600/20 text-sm">
                     <i class="fa-solid fa-file-excel text-lg"></i>
-                    <span>Ekspor Excel Harian</span>
+                    <span>Ekspor ke Excel</span>
                 </button>
             </aside>
 
@@ -258,7 +228,7 @@
                             <span>Riwayat Transaksi Harian</span>
                             <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300" id="trans-count-badge">0 item</span>
                         </h2>
-                        <p class="text-xs text-slate-500 mt-1">Seluruh riwayat pemesanan lengkap (Dibooking, Selesai, dan Dibatalkan)</p>
+                        <p class="text-xs text-slate-500 mt-1">Laporan resmi seluruh transaksi booking, F&B, diskon, dan pembatalan</p>
                     </div>
                 </div>
 
@@ -266,44 +236,42 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
-                                <th class="py-3.5 px-4">ID Pemesanan</th>
+                                <th class="py-3.5 px-4">ID Booking</th>
                                 <th class="py-3.5 px-4">Nama Pelanggan</th>
-                                <th class="py-3.5 px-4">Nomor HP</th>
+                                <th class="py-3.5 px-4">No. HP</th>
                                 <th class="py-3.5 px-4">Meja</th>
+                                <th class="py-3.5 px-4">Waktu Booking</th>
                                 <th class="py-3.5 px-4">Waktu Dibuat</th>
                                 <th class="py-3.5 px-4">Waktu Selesai / Batal</th>
-                                <th class="py-3.5 px-4">Waktu Booking</th>
                                 <th class="py-3.5 px-4">Durasi</th>
                                 <th class="py-3.5 px-4 text-right">Biaya Meja</th>
-                                <th class="py-3.5 px-4">F&B / Tambahan</th>
+                                <th class="py-3.5 px-4 text-left">F&B / Tambahan</th>
                                 <th class="py-3.5 px-4 text-right">Diskon</th>
                                 <th class="py-3.5 px-4 text-right">Total Bayar</th>
                                 <th class="py-3.5 px-4 text-center">Status</th>
                             </tr>
                         </thead>
-                        <tbody id="trans-table-body" class="divide-y divide-slate-200 text-sm">
-                            <!-- JS mengisi baris transaksi -->
-                        </tbody>
+                        <tbody id="trans-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
                     </table>
                 </div>
             </section>
         </div>
 
-        <!-- HALAMAN 3: PENGATURAN PEMILIK (DIPROTEKSI PIN) -->
+        <!-- HALAMAN 3: PENGATURAN PEMILIK -->
         <div id="page-setting" class="flex-1 flex w-full h-full overflow-y-auto bg-slate-50 p-6 hidden">
-            <div class="max-w-2xl mx-auto w-full my-auto pb-8">
-                <div id="setting-pin-lock" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl text-center">
+            <div class="max-w-3xl mx-auto w-full py-4">
+                <div id="setting-pin-lock" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl text-center max-w-md mx-auto my-12">
                     <div class="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl mx-auto mb-4">
                         <i class="fa-solid fa-lock"></i>
                     </div>
-                    <h2 class="text-2xl font-extrabold text-slate-900">Khusus Akses Pemilik</h2>
-                    <p class="text-xs text-slate-500 mt-1 mb-6">Masukkan PIN 4 digit untuk mengelola tarif, produk F&B, dan diskon.</p>
+                    <h2 class="text-2xl font-extrabold text-slate-900">Akses Pengaturan Pemilik</h2>
+                    <p class="text-xs text-slate-500 mt-1 mb-6">Masukkan PIN Keamanan 4 digit untuk membuka pengaturan tarif dan fitur.</p>
 
                     <form onsubmit="handlePinSubmit(event)" class="flex flex-col items-center gap-4">
                         <div class="flex gap-3 justify-center">
                             <input type="password" maxlength="4" id="pin-input" placeholder="••••" class="w-40 text-center tracking-[1em] text-2xl font-black bg-slate-50 border border-slate-300 rounded-2xl py-3 text-emerald-600 focus:outline-none focus:border-emerald-500 transition shadow-inner">
                         </div>
-                        <p id="pin-error-msg" class="text-xs text-red-500 hidden font-bold"></p>
+                        <p id="pin-error-msg" class="text-xs text-rose-500 hidden font-bold"></p>
                         <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm mt-2">
                             Buka Pengaturan
                         </button>
@@ -318,84 +286,49 @@
                             </div>
                             <div>
                                 <h2 class="text-xl font-bold text-slate-900">Panel Kontrol Pemilik</h2>
-                                <p class="text-xs text-slate-500">Konfigurasi tarif mingguan, F&B, aturan diskon & keamanan</p>
+                                <p class="text-xs text-slate-500">Kelola tarif mingguan, daftar F&B, aturan diskon & keamanan</p>
                             </div>
                         </div>
                         <button onclick="lockSettings()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3.5 py-2 rounded-xl font-bold border border-slate-300 transition">
-                            <i class="fa-solid fa-lock mr-1.5"></i> Kunci
+                            <i class="fa-solid fa-lock mr-1.5"></i> Kunci Panel
                         </button>
                     </div>
 
-                    <!-- 1. Tarif Per Jam -->
                     <form onsubmit="savePriceSetting(event)" class="flex flex-col gap-5">
-                        <div>
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Tarif Jam Bermain per Hari (IDR)</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <span class="text-xs font-semibold text-slate-600">Senin</span>
-                                    <input type="number" step="1000" id="rate-Mon" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-slate-600">Selasa</span>
-                                    <input type="number" step="1000" id="rate-Tue" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-slate-600">Rabu</span>
-                                    <input type="number" step="1000" id="rate-Wed" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-slate-600">Kamis</span>
-                                    <input type="number" step="1000" id="rate-Thu" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-emerald-800 font-bold">Jumat (Akhir Pekan)</span>
-                                    <input type="number" step="1000" id="rate-Fri" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <div>
-                                    <span class="text-xs font-semibold text-amber-700 font-bold">Sabtu (Akhir Pekan)</span>
-                                    <input type="number" step="1000" id="rate-Sat" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
-                                <div class="col-span-2">
-                                    <span class="text-xs font-semibold text-amber-700 font-bold">Minggu (Akhir Pekan)</span>
-                                    <input type="number" step="1000" id="rate-Sun" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
-                                </div>
+                        <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 border-b border-slate-100 pb-2">1. Tarif Sewa Meja per Jam (IDR)</h3>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div>
+                                <span class="text-xs font-semibold text-slate-600">Senin</span>
+                                <input type="number" step="1000" id="rate-Mon" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-600">Selasa</span>
+                                <input type="number" step="1000" id="rate-Tue" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-600">Rabu</span>
+                                <input type="number" step="1000" id="rate-Wed" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-slate-600">Kamis</span>
+                                <input type="number" step="1000" id="rate-Thu" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-emerald-800 font-bold">Jumat</span>
+                                <input type="number" step="1000" id="rate-Fri" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-amber-700 font-bold">Sabtu</span>
+                                <input type="number" step="1000" id="rate-Sat" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
+                            </div>
+                            <div>
+                                <span class="text-xs font-semibold text-amber-700 font-bold">Minggu</span>
+                                <input type="number" step="1000" id="rate-Sun" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 transition">
                             </div>
                         </div>
 
-                        <!-- 2. Toggle Diskon Google Review & Booking Fee -->
-                        <div class="pt-4 border-t border-slate-200 flex flex-col gap-4">
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Diskon Ulasan Google (5%)</label>
-                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
-                                    <div>
-                                        <span class="text-sm font-bold text-slate-800 block">Aktifkan Diskon Google Review</span>
-                                        <span class="text-xs text-slate-500">Kasir dapat memberikan potongan 5% jika pelanggan memberi ulasan.</span>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="setting-google-discount-enabled" class="sr-only peer" onchange="toggleGoogleReviewDiscountSetting()">
-                                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Biaya Pemesanan (Booking Fee)</label>
-                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
-                                    <div>
-                                        <span class="text-sm font-bold text-slate-800 block">Aktifkan Modul Booking Fee</span>
-                                        <span class="text-xs text-slate-500">Persiapan dukungan biaya pemesanan awal untuk pembaruan skema mendatang.</span>
-                                    </div>
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="setting-booking-fee-enabled" class="sr-only peer" onchange="toggleBookingFeeSetting()">
-                                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 3. Ubah PIN Pemilik -->
                         <div class="pt-4 border-t border-slate-200">
-                            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Ubah PIN Keamanan Pemilik</label>
+                            <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 mb-3">2. Keamanan PIN Pemilik</h3>
                             <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <span class="text-[11px] text-slate-500 block mb-1 font-semibold">PIN Baru (4 Digit)</span>
@@ -408,88 +341,85 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-2xl transition shadow-md shadow-emerald-600/20 text-sm">
-                            Simpan Tarif & Pengaturan PIN
+                        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md text-sm">
+                            Simpan Tarif & PIN
                         </button>
                     </form>
 
-                    <!-- 4. Kelola Produk F&B -->
-                    <div class="pt-5 border-t border-slate-200">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Daftar Produk Makanan & Minuman (F&B)</label>
+                    <div class="pt-4 border-t border-slate-200 flex flex-col gap-4">
+                        <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800">3. Modul & Fitur Opsional</h3>
+                        <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div>
+                                <span class="font-bold text-sm text-slate-800 block">Diskon Ulasan Google (5%)</span>
+                                <span class="text-xs text-slate-500">Izinkan kasir memberikan potongan 5% bagi pelanggan yang memberi ulasan</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-google-discount-enabled" onchange="toggleGoogleReviewDiscountSetting()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+                        <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                            <div>
+                                <span class="font-bold text-sm text-slate-800 block">Modul Booking Fee (Pengembangan Mendatang)</span>
+                                <span class="text-xs text-slate-500">Aktifkan struktur pendukung biaya pemesanan awal</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="setting-booking-fee-enabled" onchange="toggleBookingFeeSetting()" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200">
+                        <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 mb-3">4. Kelola Menu Makanan & Minuman (F&B)</h3>
                         <form onsubmit="handleAddProduct(event)" class="flex gap-2 mb-4">
-                            <input type="text" id="new-product-name" required placeholder="Nama Produk (misal: Kopi Susu)" class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-emerald-500">
-                            <input type="number" id="new-product-price" step="500" required placeholder="Harga (IDR)" class="w-32 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 focus:outline-none focus:border-emerald-500">
+                            <input type="text" id="new-product-name" placeholder="Nama Menu (contoh: Kopi Susu)" required class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold">
+                            <input type="number" id="new-product-price" placeholder="Harga (IDR)" required step="500" class="w-32 bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
                             <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
                                 <i class="fa-solid fa-plus mr-1"></i> Tambah
                             </button>
                         </form>
-                        <div class="border border-slate-200 rounded-2xl overflow-hidden max-h-48 overflow-y-auto bg-slate-50">
-                            <table class="w-full text-xs text-left">
-                                <thead class="bg-slate-200 text-slate-700 uppercase font-bold">
-                                    <tr>
-                                        <th class="p-2.5">Nama Produk</th>
-                                        <th class="p-2.5 text-right">Harga</th>
-                                        <th class="p-2.5 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="products-table-body" class="divide-y divide-slate-200">
-                                    <!-- Dynamic product rows -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                            <thead class="bg-slate-100 font-bold uppercase text-slate-600">
+                                <tr>
+                                    <th class="p-2.5">Nama Menu</th>
+                                    <th class="p-2.5 text-right">Harga</th>
+                                    <th class="p-2.5 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body"></tbody>
+                        </table>
                     </div>
 
-                    <!-- 5. Kelola Aturan Diskon Otomatis -->
-                    <div class="pt-5 border-t border-slate-200">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Aturan Diskon Otomatis (Durasi Bermain)</label>
-                        <form onsubmit="handleAddDiscountRule(event)" class="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col gap-3 mb-4">
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <span class="text-[11px] font-semibold text-slate-600 block mb-1">Minimal Durasi (Jam)</span>
-                                    <input type="number" step="0.5" min="1" id="rule-min-hours" required placeholder="misal: 3" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
-                                </div>
-                                <div>
-                                    <span class="text-[11px] font-semibold text-slate-600 block mb-1">Jenis Diskon</span>
-                                    <select id="rule-type" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
-                                        <option value="PERCENT">Persentase (%)</option>
-                                        <option value="FIXED">Nominal Tetap (Rp)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <span class="text-[11px] font-semibold text-slate-600 block mb-1">Nilai Diskon (% / Rp)</span>
-                                    <input type="number" step="1" id="rule-value" required placeholder="misal: 10 (10% atau Rp 10.000)" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
-                                </div>
-                                <div>
-                                    <span class="text-[11px] font-semibold text-slate-600 block mb-1">Hari Berlaku</span>
-                                    <select id="rule-days" class="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold">
-                                        <option value="ALL">Setiap Hari</option>
-                                        <option value="WEEKDAY">Hari Kerja (Senin-Kamis)</option>
-                                        <option value="WEEKEND">Akhir Pekan (Jumat-Minggu)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition mt-1">
+                    <div class="pt-4 border-t border-slate-200">
+                        <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 mb-3">5. Aturan Diskon Otomatis Durasi Main</h3>
+                        <form onsubmit="handleAddDiscountRule(event)" class="grid grid-cols-4 gap-2 mb-4">
+                            <input type="number" id="rule-min-hours" placeholder="Min. Jam (contoh: 3)" required step="0.5" class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold">
+                            <select id="rule-type" class="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold">
+                                <option value="PERCENT">Persen (%)</option>
+                                <option value="FIXED">Nominal (Rp)</option>
+                            </select>
+                            <input type="number" id="rule-value" placeholder="Nilai Diskon" required step="500" class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold">
+                            <select id="rule-days" class="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold">
+                                <option value="ALL">Setiap Hari</option>
+                                <option value="WEEKDAY">Weekday</option>
+                                <option value="WEEKEND">Weekend</option>
+                            </select>
+                            <button type="submit" class="col-span-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 rounded-xl text-xs transition mt-1">
                                 <i class="fa-solid fa-plus mr-1"></i> Tambah Aturan Diskon
                             </button>
                         </form>
-
-                        <div class="border border-slate-200 rounded-2xl overflow-hidden bg-slate-50">
-                            <table class="w-full text-xs text-left">
-                                <thead class="bg-slate-200 text-slate-700 uppercase font-bold">
-                                    <tr>
-                                        <th class="p-2.5">Aturan</th>
-                                        <th class="p-2.5">Hari</th>
-                                        <th class="p-2.5 text-right">Nilai</th>
-                                        <th class="p-2.5 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="discount-rules-table-body" class="divide-y divide-slate-200">
-                                    <!-- Dynamic rules rows -->
-                                </tbody>
-                            </table>
-                        </div>
+                        <table class="w-full text-left text-xs border border-slate-200 rounded-xl overflow-hidden">
+                            <thead class="bg-slate-100 font-bold uppercase text-slate-600">
+                                <tr>
+                                    <th class="p-2.5">Minimal Durasi</th>
+                                    <th class="p-2.5">Berlaku Hari</th>
+                                    <th class="p-2.5 text-right">Potongan</th>
+                                    <th class="p-2.5 text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="discount-rules-table-body"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -497,12 +427,12 @@
 
     </main>
 
-    <!-- MODAL: PEMESANAN BARU -->
+    <!-- MODAL: BUAT BOOKING BARU -->
     <div id="modal-create-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
                 <h3 class="font-extrabold text-lg text-slate-900 flex items-center gap-2">
-                    <span class="text-emerald-600">🀄</span> Pemesanan Meja Baru
+                    <span class="text-emerald-600">🀄</span> Booking Meja Mahjong
                 </h3>
                 <button onclick="closeBookingModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
                     <i class="fa-solid fa-xmark"></i>
@@ -516,7 +446,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Nomor WhatsApp / HP</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Nomor Handphone (HP)</label>
                     <input type="tel" id="form-phone" required placeholder="Contoh: 0812-3456-7890" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
                 </div>
 
@@ -538,225 +468,350 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Waktu Mulai</label>
-                        <select id="form-start-slot" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
-                            <!-- Injeksi JS slot 15 menit yang belum lewat -->
-                        </select>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Jam Mulai</label>
+                        <select id="form-start-slot" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition"></select>
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Durasi Bermain (Min. 1 Jam, Kelipatan 30 Menit)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Durasi Main</label>
                     <div class="grid grid-cols-2 gap-3 items-center">
-                        <select id="form-duration-slots" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition">
-                            <!-- Populated with 1h, 1.5h, 2h, 2.5h, 3h, ... up to 8h -->
-                        </select>
+                        <select id="form-duration-slots" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition"></select>
                         <span id="form-end-time-preview" class="text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200">Selesai: --:--</span>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Catatan Tambahan (Opsional)</label>
-                    <input type="text" id="form-notes" placeholder="Contoh: Meja VIP / Minta Mahjong Otomatis" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 transition">
+                    <input type="text" id="form-notes" placeholder="Contoh: Minta meja dekat kipas" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-emerald-500 transition">
                 </div>
 
                 <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between mt-1">
                     <div>
-                        <span class="text-xs text-slate-500 block font-semibold" id="form-day-info">Tarif Meja</span>
-                        <span id="form-calculated-rate" class="text-[11px] text-emerald-700 font-bold">1 Jam × Rp 50.000/jam</span>
+                        <span class="text-xs text-slate-500 block font-semibold" id="form-day-info">Tarif Hari Ini</span>
+                        <span id="form-calculated-rate" class="text-[11px] text-emerald-700 font-bold">1 jam × Rp 50.000</span>
                     </div>
                     <span id="form-total-price" class="text-2xl font-black text-emerald-700">Rp 50.000</span>
                 </div>
 
                 <div class="flex gap-3 mt-1">
                     <button type="button" onclick="closeBookingModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Batal</button>
-                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm">Kunci Pemesanan</button>
+                    <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm">Kunci Booking</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- MODAL: KELOLA / BAYAR / BATALKAN TRANSAKSI -->
-    <div id="modal-manage-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden overflow-y-auto">
-        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-auto">
-            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+    <!-- MODAL: KELOLA / BAYAR / BATALKAN BOOKING -->
+    <div id="modal-manage-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
+            <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
                 <div>
-                    <h3 class="font-extrabold text-lg text-slate-900" id="modal-manage-table">Detail Transaksi Meja</h3>
-                    <p class="text-xs text-slate-500 font-mono" id="modal-manage-id">ID Transaksi: #---</p>
+                    <h3 class="font-extrabold text-lg text-slate-900" id="modal-manage-table">Detail Meja</h3>
+                    <p class="text-xs text-slate-500 font-mono" id="modal-manage-id">ID Booking: #---</p>
                 </div>
                 <button onclick="closeManageModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="p-6 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
-                <!-- Informasi Utama -->
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2 text-xs">
-                    <div class="flex justify-between items-center">
+            <div class="p-6 flex flex-col gap-4 overflow-y-auto flex-1">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col gap-2">
+                    <div class="flex justify-between items-center text-xs">
                         <span class="text-slate-500 font-medium">Pelanggan:</span>
-                        <span class="font-bold text-slate-900 text-sm" id="modal-manage-name">-</span>
+                        <span class="font-bold text-slate-900" id="modal-manage-name">-</span>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-slate-500 font-medium">Nomor HP:</span>
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="text-slate-500 font-medium">No. HP:</span>
                         <span class="font-mono text-slate-700 font-bold" id="modal-manage-phone">-</span>
                     </div>
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center text-xs">
                         <span class="text-slate-500 font-medium">Waktu Main:</span>
                         <span class="font-bold text-emerald-700" id="modal-manage-time">-</span>
                     </div>
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center text-xs">
                         <span class="text-slate-500 font-medium">Durasi:</span>
                         <span class="font-semibold text-slate-700" id="modal-manage-duration">-</span>
                     </div>
-                    <div class="flex justify-between items-center border-t border-slate-200 pt-2">
-                        <span class="text-slate-500 font-medium">Biaya Meja Utama:</span>
+                    <div class="flex justify-between items-center text-xs border-t border-slate-200 pt-2">
+                        <span class="text-slate-500 font-medium">Sewa Meja:</span>
                         <span class="font-bold text-slate-800" id="modal-manage-base-price">Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center text-xs">
                         <span class="text-slate-500 font-medium">Status:</span>
-                        <span class="px-2.5 py-0.5 rounded-full font-bold" id="modal-manage-status">-</span>
+                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold" id="modal-manage-status">-</span>
                     </div>
                 </div>
 
-                <!-- Bagian 2: Tambahan F&B (Makanan & Minuman) -->
-                <div id="section-fb-add" class="bg-emerald-50/60 border border-emerald-200 rounded-2xl p-4 flex flex-col gap-3">
-                    <div class="flex items-center justify-between text-xs font-bold text-emerald-900">
-                        <span><i class="fa-solid fa-utensils mr-1"></i> Tambah Makanan & Minuman (F&B)</span>
-                    </div>
+                <!-- Bagian Tambah F&B -->
+                <div id="section-fb-selection" class="border border-slate-200 rounded-2xl p-3.5 bg-slate-50 flex flex-col gap-2.5">
+                    <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-utensils text-emerald-600"></i> Tambah Makanan / Minuman (F&B)
+                    </span>
                     <div class="flex gap-2">
-                        <select id="modal-fb-select" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold">
-                            <!-- Populated with items -->
-                        </select>
-                        <input type="number" id="modal-fb-qty" min="1" value="1" class="w-16 bg-white border border-slate-300 rounded-xl px-2 py-2 text-xs font-bold text-center">
-                        <button type="button" onclick="addFBItemToActiveBooking()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-xl text-xs transition">
-                            Tambah
+                        <select id="modal-fb-picker" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-500"></select>
+                        <input type="number" id="modal-fb-qty" value="1" min="1" class="w-16 bg-white border border-slate-300 rounded-xl px-2 py-2 text-xs text-center font-bold">
+                        <button onclick="addSelectedFBItem()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition">
+                            + Tambah
                         </button>
                     </div>
+                    <div id="modal-fb-list-container" class="flex flex-col gap-1.5 pt-1"></div>
+                </div>
 
-                    <!-- Lista F&B terpilih -->
-                    <div id="modal-fb-list" class="flex flex-col gap-1.5 pt-1">
-                        <!-- Items rendered by JS -->
+                <!-- Bagian Diskon -->
+                <div id="section-discount-selection" class="border border-slate-200 rounded-2xl p-3.5 bg-slate-50 flex flex-col gap-2">
+                    <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-tags text-amber-600"></i> Diskon & Potongan Harga
+                    </span>
+                    <div id="container-google-discount" class="flex items-center gap-2 p-2 bg-white border border-slate-200 rounded-xl text-xs hidden">
+                        <input type="checkbox" id="modal-chk-google-discount" onchange="recalculateManageSummary()" class="w-4 h-4 text-emerald-600 rounded">
+                        <label for="modal-chk-google-discount" class="font-bold text-slate-700 cursor-pointer">Diskon Ulasan Google (5%)</label>
+                    </div>
+                    <div class="flex items-center justify-between text-xs pt-1">
+                        <span class="text-slate-500 font-semibold" id="label-auto-discount-rule">Diskon Durasi Otomatis:</span>
+                        <span class="font-bold text-amber-700" id="value-auto-discount-rule">-</span>
                     </div>
                 </div>
 
-                <!-- Bagian 3: Opsi Diskon (Google Review & Auto Duration) -->
-                <div id="section-discounts" class="bg-amber-50/60 border border-amber-200 rounded-2xl p-4 flex flex-col gap-3 text-xs">
-                    <span class="font-bold text-amber-900"><i class="fa-solid fa-tags mr-1"></i> Aturan & Pilihan Diskon</span>
-                    
-                    <!-- Toggle Diskon Google Review -->
-                    <div id="container-google-discount-toggle" class="flex items-center justify-between bg-white border border-amber-200 p-2.5 rounded-xl">
-                        <span class="font-semibold text-slate-700">Diskon Ulasan Google (5%)</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="modal-toggle-google-discount" class="sr-only peer" onchange="toggleGoogleDiscountForBooking()">
-                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                        </label>
+                <!-- Ringkasan Rincian Pembayaran -->
+                <div class="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-4 flex flex-col gap-1.5 text-xs">
+                    <div class="flex justify-between text-slate-600 font-medium">
+                        <span>Sewa Meja:</span>
+                        <span id="summary-table-fee" class="font-bold text-slate-800">Rp 0</span>
                     </div>
-
-                    <!-- Info Diskon Durasi Otomatis -->
-                    <div id="auto-discount-banner" class="hidden bg-emerald-100 border border-emerald-300 text-emerald-800 p-2.5 rounded-xl font-medium">
-                        <i class="fa-solid fa-sparkles mr-1"></i> <span id="auto-discount-text">Diskon Otomatis</span>
+                    <div class="flex justify-between text-slate-600 font-medium">
+                        <span>Total F&B / Tambahan:</span>
+                        <span id="summary-fb-fee" class="font-bold text-slate-800">Rp 0</span>
                     </div>
-                </div>
-
-                <!-- Ringkasan Rincian Pembayaran Akhir -->
-                <div class="bg-slate-900 text-white rounded-2xl p-4 flex flex-col gap-2 text-xs">
-                    <div class="flex justify-between text-slate-300">
-                        <span>Biaya Meja:</span>
-                        <span font-mono id="summary-table-fee">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between text-slate-300">
-                        <span>Tambahan F&B:</span>
-                        <span font-mono id="summary-fb-total">Rp 0</span>
-                    </div>
-                    <div class="flex justify-between text-amber-400 font-medium">
+                    <div class="flex justify-between text-amber-700 font-medium">
                         <span>Total Diskon:</span>
-                        <span font-mono id="summary-discount-total">- Rp 0</span>
+                        <span id="summary-discount-fee" class="font-bold">- Rp 0</span>
                     </div>
-                    <div class="flex justify-between items-center border-t border-slate-700 pt-2 text-sm">
-                        <span class="font-bold text-emerald-400 uppercase">Total Akhir Bayar</span>
-                        <span class="text-2xl font-black text-emerald-400" id="modal-manage-final-price">Rp 0</span>
+                    <div class="flex justify-between items-center border-t border-emerald-200 pt-2.5 mt-1">
+                        <span class="font-extrabold text-slate-900 uppercase">Total Akhir Bayar:</span>
+                        <span id="summary-final-total" class="text-2xl font-black text-emerald-700">Rp 0</span>
                     </div>
                 </div>
 
-                <!-- Tombol Aksi Kasir -->
                 <div id="modal-manage-actions" class="flex flex-col gap-2 mt-1">
                     <button id="btn-confirm-pay" onclick="confirmBookingPayment()" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-3.5 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm flex items-center justify-center gap-2">
                         <i class="fa-solid fa-circle-check text-base"></i>
-                        <span>Konfirmasi Pembayaran & Selesaikan</span>
+                        <span>Konfirmasi Pembayaran & Tandai Lunas</span>
                     </button>
-                    <button id="btn-cancel-book" onclick="promptCancelBooking()" class="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-ban"></i>
-                        <span>Batalkan Pemesanan (Otorisasi PIN Pemilik)</span>
-                    </button>
-                </div>
-
-                <!-- Opsi Cetak Struk setelah selesai -->
-                <div id="modal-manage-completed-section" class="hidden flex flex-col gap-2 text-center">
-                    <div class="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-emerald-800 text-xs font-semibold">
-                        <i class="fa-solid fa-circle-check mr-1.5"></i> Pembayaran telah dikonfirmasi dan transaksi SELESAI.
-                    </div>
-                    <button onclick="handlePrintReceiptUI()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2 shadow-md">
-                        <i class="fa-solid fa-print"></i>
-                        <span>Cetak Struk Pembayaran</span>
+                    <button id="btn-cancel-book" onclick="openPinModalForCancel()" class="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold py-3 rounded-xl transition text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash text-base"></i>
+                        <span>Batalkan Pemesanan (Perlu PIN)</span>
                     </button>
                 </div>
 
-                <div id="modal-manage-cancelled-section" class="hidden text-center p-3 bg-rose-50 border border-rose-300 rounded-xl text-rose-800 text-xs font-semibold">
-                    <i class="fa-solid fa-ban mr-1.5"></i> Pemesanan ini telah DIBATALKAN.
+                <div id="modal-manage-locked-msg" class="hidden flex-col gap-3 text-center p-4 bg-emerald-50 border border-emerald-300 rounded-2xl">
+                    <span class="text-emerald-800 text-xs font-semibold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-lock"></i> Pembayaran Lunas. Pemesanan terkunci secara permanen.
+                    </span>
+                    <button onclick="handlePrintReceipt()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-print"></i> Cetak Struk Pembayaran
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- MODAL POPUP: KONFIRMASI PIN PEMILIK UNTUK PEMBATALAN -->
-    <div id="modal-pin-prompt" class="fixed inset-0 bg-slate-900/70 modal-blur z-50 flex items-center justify-center p-4 hidden">
+    <!-- MODAL AUTHORIZATION PIN PEMBATALAN -->
+    <div id="modal-pin-cancel" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center">
-            <div class="w-12 h-12 rounded-2xl bg-rose-100 border border-rose-300 text-rose-600 flex items-center justify-center text-xl mx-auto mb-3">
+            <div class="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 flex items-center justify-center text-xl mx-auto mb-3">
                 <i class="fa-solid fa-shield-halved"></i>
             </div>
             <h3 class="font-extrabold text-base text-slate-900">Otorisasi Pembatalan</h3>
-            <p class="text-xs text-slate-500 mt-1 mb-4">Masukkan PIN Pemilik untuk membatalkan transaksi ini.</p>
-            <input type="password" maxlength="4" id="cancel-pin-input" placeholder="••••" class="w-36 text-center tracking-[0.8em] text-xl font-black bg-slate-50 border border-slate-300 rounded-xl py-2.5 text-slate-900 focus:outline-none focus:border-rose-500 mb-2">
-            <p id="cancel-pin-error" class="text-xs text-rose-600 font-bold mb-3 hidden">PIN Salah!</p>
-            <div class="flex gap-2">
-                <button onclick="closePinPrompt()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Batal</button>
-                <button onclick="executeBookingCancellation()" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">Konfirmasi Batal</button>
-            </div>
+            <p class="text-xs text-slate-500 mt-1 mb-4">Masukkan PIN Pemilik untuk membatalkan pesanan ini.</p>
+            
+            <form onsubmit="executeBookingCancellation(event)" class="flex flex-col gap-3">
+                <input type="password" maxlength="4" id="cancel-pin-input" placeholder="••••" required class="w-36 mx-auto text-center tracking-[0.8em] text-xl font-black bg-slate-50 border border-slate-300 rounded-xl py-2.5 text-rose-600 focus:outline-none focus:border-rose-500 transition">
+                <p id="cancel-pin-err" class="text-xs text-rose-600 font-bold hidden"></p>
+                <div class="flex gap-2 mt-2">
+                    <button type="button" onclick="closePinModalForCancel()" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Batal</button>
+                    <button type="submit" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md shadow-rose-600/20">Konfirmasi Batal</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script>
-        const TOTAL_SLOTS = 64; // 10:00 to 02:00 (16 hours = 64 slots of 15 min)
+
+        // =========================================================================
+        // KONFIGURASI FIREBASE CLOUD DATABASE
+        // Silakan ganti objek firebaseConfig di bawah ini dengan config dari Firebase Console Anda
+        // =========================================================================
+  // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAYUwB6v9vjRf4bOHqR1zF8KRykAa1j84U",
+            authDomain: "pos-8-mahjong-db.firebaseapp.com",
+            projectId: "pos-8-mahjong-db",
+            storageBucket: "pos-8-mahjong-db.firebasestorage.app",
+            messagingSenderId: "951698107287",
+            appId: "1:951698107287:web:9c74b062b07bae2c48f2d2",
+            measurementId: "G-R42W0RRG96"
+        };
+
+        const TOTAL_SLOTS = 64; // 10:00 s/d 02:00 = 16 Jam (64 slot x 15 menit)
 
         let state = {
-            dayRates: {
-                Mon: 50000,
-                Tue: 50000,
-                Wed: 50000,
-                Thu: 50000,
-                Fri: 60000,
-                Sat: 75000,
-                Sun: 75000
-            },
+            dayRates: { Mon: 50000, Tue: 50000, Wed: 50000, Thu: 50000, Fri: 60000, Sat: 75000, Sun: 75000 },
             ownerPin: "1234",
-            googleReviewEnabled: true,
-            bookingFeeEnabled: false,
-            products: [
-                { id: "p1", name: "Teh Manis Dingin / Panas", price: 10000 },
-                { id: "p2", name: "Kopi Hitam / Kopi Susu", price: 15000 },
-                { id: "p3", name: "Air Mineral Botol", price: 8000 },
-                { id: "p4", name: "Snack Platter Mahjong", price: 25000 },
-                { id: "p5", name: "Mie Instant + Telur", price: 18000 }
-            ],
-            discountRules: [
-                { id: "dr1", minHours: 3, type: "PERCENT", value: 5, days: "ALL", enabled: true },
-                { id: "dr2", minHours: 5, type: "PERCENT", value: 10, days: "ALL", enabled: true }
-            ],
             settingsUnlocked: false,
             selectedDate: new Date().toISOString().split('T')[0],
             activeBookingId: null,
-            bookings: []
+            bookings: [],
+            products: [
+                { id: "P1", name: "Kopi Susu Gula Aren", price: 20000 },
+                { id: "P2", name: "Teh Manis Dingin", price: 10000 },
+                { id: "P3", name: "Kentang Goreng", price: 25000 },
+                { id: "P4", name: "Dimsum Ayam (4 pcs)", price: 22000 }
+            ],
+            discountRules: [
+                { id: "R1", minHours: 3, type: "PERCENT", value: 5, days: "ALL", enabled: true },
+                { id: "R2", minHours: 5, type: "PERCENT", value: 10, days: "ALL", enabled: true }
+            ],
+            settings: {
+                googleReviewDiscountEnabled: true,
+                bookingFeeEnabled: false
+            },
+            currentFBItems: [],
+            isCloudOnline: false
         };
+
+        let db = null;
+        let auth = null;
+
+        // Inisialisasi Firebase & Fallback Offline
+        function initFirebase() {
+            try {
+                if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    auth = firebase.auth();
+
+                    auth.signInAnonymously().then(() => {
+                        state.isCloudOnline = true;
+                        updateSyncBadge(true);
+                        subscribeCloudData();
+                    }).catch(err => {
+                        console.warn("Auth Firebase gagal, beralih ke lokal storage:", err);
+                        fallbackToLocalStorage();
+                    });
+                } else {
+                    fallbackToLocalStorage();
+                }
+            } catch (e) {
+                console.warn("Inisialisasi Firebase gagal, menggunakan mode offline:", e);
+                fallbackToLocalStorage();
+            }
+        }
+
+        function updateSyncBadge(online) {
+            const badge = document.getElementById('sync-status-badge');
+            if (!badge) return;
+            if (online) {
+                badge.className = "text-xs text-emerald-600 font-semibold flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Tersambung Cloud Sync`;
+            } else {
+                badge.className = "text-xs text-amber-600 font-semibold flex items-center gap-1.5";
+                badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> Mode Offline Lokal`;
+            }
+        }
+
+        function fallbackToLocalStorage() {
+            state.isCloudOnline = false;
+            updateSyncBadge(false);
+            initLocalStore();
+        }
+
+        function subscribeCloudData() {
+            if (!db) return;
+
+            // Dapatkan Data Booking
+            db.collection("bookings").onSnapshot(snapshot => {
+                state.bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderTimeline();
+                renderTransactions();
+            }, err => {
+                console.error("Gagal mendengarkan data booking cloud:", err);
+            });
+
+            // Dapatkan Data Pengaturan & F&B
+            db.collection("settings").doc("config").onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    if (data.dayRates) state.dayRates = data.dayRates;
+                    if (data.ownerPin) state.ownerPin = data.ownerPin;
+                    if (data.products) state.products = data.products;
+                    if (data.discountRules) state.discountRules = data.discountRules;
+                    if (data.settings) state.settings = data.settings;
+                } else {
+                    saveCloudSettings();
+                }
+                updateHeaderRateDisplay();
+                renderProductsTable();
+                renderDiscountRulesTable();
+            }, err => {
+                console.error("Gagal mendengarkan data pengaturan cloud:", err);
+            });
+        }
+
+        function saveCloudBooking(booking) {
+            if (state.isCloudOnline && db) {
+                db.collection("bookings").doc(booking.id).set(booking).catch(err => console.error("Gagal simpan booking cloud:", err));
+            } else {
+                saveLocalBookings();
+            }
+        }
+
+        function saveCloudSettings() {
+            if (state.isCloudOnline && db) {
+                db.collection("settings").doc("config").set({
+                    dayRates: state.dayRates,
+                    ownerPin: state.ownerPin,
+                    products: state.products,
+                    discountRules: state.discountRules,
+                    settings: state.settings
+                }).catch(err => console.error("Gagal simpan pengaturan cloud:", err));
+            } else {
+                saveLocalSettings();
+            }
+        }
+
+        function initLocalStore() {
+            const savedRates = localStorage.getItem('mj_day_rates_v7');
+            if (savedRates) { try { state.dayRates = JSON.parse(savedRates); } catch(e){} }
+
+            const savedPin = localStorage.getItem('mj_owner_pin_v7');
+            if (savedPin) state.ownerPin = savedPin;
+
+            const savedBookings = localStorage.getItem('mj_bookings_v7');
+            if (savedBookings) { try { state.bookings = JSON.parse(savedBookings); } catch(e){} }
+
+            const savedProducts = localStorage.getItem('mj_products_v7');
+            if (savedProducts) { try { state.products = JSON.parse(savedProducts); } catch(e){} }
+
+            const savedRules = localStorage.getItem('mj_discount_rules_v7');
+            if (savedRules) { try { state.discountRules = JSON.parse(savedRules); } catch(e){} }
+
+            const savedSettings = localStorage.getItem('mj_app_settings_v7');
+            if (savedSettings) { try { state.settings = JSON.parse(savedSettings); } catch(e){} }
+        }
+
+        function saveLocalBookings() {
+            localStorage.setItem('mj_bookings_v7', JSON.stringify(state.bookings));
+        }
+
+        function saveLocalSettings() {
+            localStorage.setItem('mj_day_rates_v7', JSON.stringify(state.dayRates));
+            localStorage.setItem('mj_owner_pin_v7', state.ownerPin);
+            localStorage.setItem('mj_products_v7', JSON.stringify(state.products));
+            localStorage.setItem('mj_discount_rules_v7', JSON.stringify(state.discountRules));
+            localStorage.setItem('mj_app_settings_v7', JSON.stringify(state.settings));
+        }
+
 
         function formatIDR(amount) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount || 0);
@@ -765,13 +820,8 @@
         function formatDateTime(isoStr) {
             if (!isoStr) return '-';
             const d = new Date(isoStr);
-            if (isNaN(d.getTime())) return '-';
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            const hours = String(d.getHours()).padStart(2, '0');
-            const mins = String(d.getMinutes()).padStart(2, '0');
-            return `${day}/${month}/${year} ${hours}:${mins}`;
+            const pad = (n) => n < 10 ? '0' + n : n;
+            return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
         }
 
         function getDayKey(dateStr) {
@@ -794,71 +844,38 @@
             return `${hh}:${mm}`;
         }
 
-        function initStore() {
-            const savedRates = localStorage.getItem('mj_day_rates_v7');
-            if (savedRates) { try { state.dayRates = JSON.parse(savedRates); } catch(e){} }
+        function isSlotPast(dateStr, slotIdx) {
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            if (dateStr < todayStr) return true;
+            if (dateStr > todayStr) return false;
 
-            const savedPin = localStorage.getItem('mj_owner_pin_v7');
-            if (savedPin) state.ownerPin = savedPin;
-
-            const savedGoogleSetting = localStorage.getItem('mj_google_disc_enabled_v7');
-            if (savedGoogleSetting !== null) state.googleReviewEnabled = savedGoogleSetting === 'true';
-
-            const savedBookingFeeSetting = localStorage.getItem('mj_booking_fee_enabled_v7');
-            if (savedBookingFeeSetting !== null) state.bookingFeeEnabled = savedBookingFeeSetting === 'true';
-
-            const savedProducts = localStorage.getItem('mj_products_v7');
-            if (savedProducts) { try { state.products = JSON.parse(savedProducts); } catch(e){} }
-
-            const savedRules = localStorage.getItem('mj_discount_rules_v7');
-            if (savedRules) { try { state.discountRules = JSON.parse(savedRules); } catch(e){} }
-
-            const savedBookings = localStorage.getItem('mj_bookings_v7');
-            if (savedBookings) {
-                try { state.bookings = JSON.parse(savedBookings); } catch(e) { state.bookings = []; }
-            } else {
-                state.bookings = [];
-                saveBookings();
-            }
-        }
-
-        function saveBookings() {
-            localStorage.setItem('mj_bookings_v7', JSON.stringify(state.bookings));
-        }
-
-        function saveProducts() {
-            localStorage.setItem('mj_products_v7', JSON.stringify(state.products));
-        }
-
-        function saveDiscountRules() {
-            localStorage.setItem('mj_discount_rules_v7', JSON.stringify(state.discountRules));
+            const slotMinutes = 10 * 60 + (slotIdx * 15);
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            return slotMinutes < currentMinutes;
         }
 
         function switchPage(page) {
-            document.getElementById('page-book').classList.add('hidden');
-            document.getElementById('page-trans').classList.add('hidden');
-            document.getElementById('page-setting').classList.add('hidden');
+            document.getElementById('page-book')?.classList.add('hidden');
+            document.getElementById('page-trans')?.classList.add('hidden');
+            document.getElementById('page-setting')?.classList.add('hidden');
 
             document.getElementById('nav-book').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
             document.getElementById('nav-trans').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
             document.getElementById('nav-setting').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
 
             if (page === 'book') {
-                document.getElementById('page-book').classList.remove('hidden');
+                document.getElementById('page-book')?.classList.remove('hidden');
                 document.getElementById('nav-book').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
                 renderTimeline();
             } else if (page === 'trans') {
-                document.getElementById('page-trans').classList.remove('hidden');
+                document.getElementById('page-trans')?.classList.remove('hidden');
                 document.getElementById('nav-trans').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
-                
-                const sDate = document.getElementById('trans-start-date');
-                const eDate = document.getElementById('trans-end-date');
-                if (sDate && !sDate.value) sDate.value = state.selectedDate;
-                if (eDate && !eDate.value) eDate.value = state.selectedDate;
-                
+                document.getElementById('trans-start-date').value = state.selectedDate;
+                document.getElementById('trans-end-date').value = state.selectedDate;
                 renderTransactions();
             } else if (page === 'setting') {
-                document.getElementById('page-setting').classList.remove('hidden');
+                document.getElementById('page-setting')?.classList.remove('hidden');
                 document.getElementById('nav-setting').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
                 updateSettingsUI();
             }
@@ -869,10 +886,10 @@
             const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
             const nextDay = new Date(today); nextDay.setDate(nextDay.getDate() + 2);
 
-            document.getElementById('selected-date').value = state.selectedDate;
-            document.getElementById('label-date-today').innerText = formatDateShort(today);
-            document.getElementById('label-date-tomorrow').innerText = formatDateShort(tomorrow);
-            document.getElementById('label-date-next').innerText = formatDateShort(nextDay);
+            if (document.getElementById('selected-date')) document.getElementById('selected-date').value = state.selectedDate;
+            if (document.getElementById('label-date-today')) document.getElementById('label-date-today').innerText = formatDateShort(today);
+            if (document.getElementById('label-date-tomorrow')) document.getElementById('label-date-tomorrow').innerText = formatDateShort(tomorrow);
+            if (document.getElementById('label-date-next')) document.getElementById('label-date-next').innerText = formatDateShort(nextDay);
 
             updateHeaderRateDisplay();
         }
@@ -880,9 +897,9 @@
         function updateHeaderRateDisplay() {
             const currentDayKey = getDayKey(state.selectedDate);
             const rate = getHourlyRateForDate(state.selectedDate);
-            document.getElementById('current-day-label').innerText = `Tarif Hari ${currentDayKey}`;
-            document.getElementById('current-rate-display').innerText = `${formatIDR(rate)} / jam`;
-            document.getElementById('day-rate-badge').innerText = `Tarif ${currentDayKey}: ${formatIDR(rate)}/jam`;
+            if (document.getElementById('current-day-label')) document.getElementById('current-day-label').innerText = `Tarif ${currentDayKey}`;
+            if (document.getElementById('current-rate-display')) document.getElementById('current-rate-display').innerText = `${formatIDR(rate)} / jam`;
+            if (document.getElementById('day-rate-badge')) document.getElementById('day-rate-badge').innerText = `Tarif (${currentDayKey}): ${formatIDR(rate)}/jam`;
         }
 
         function formatDateShort(dateObj) {
@@ -893,7 +910,7 @@
             const d = new Date();
             d.setDate(d.getDate() + offsetDays);
             state.selectedDate = d.toISOString().split('T')[0];
-            document.getElementById('selected-date').value = state.selectedDate;
+            if (document.getElementById('selected-date')) document.getElementById('selected-date').value = state.selectedDate;
             handleDateChange(state.selectedDate);
         }
 
@@ -903,45 +920,33 @@
             renderTimeline();
         }
 
-        function isSlotInPast(slotIdx, dateStr) {
-            const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
-
-            if (dateStr < todayStr) return true; // past dates
-            if (dateStr > todayStr) return false; // future dates
-
-            // If same day as today
-            const slotStartMins = 10 * 60 + (slotIdx * 15);
-            const currentMins = now.getHours() * 60 + now.getMinutes();
-
-            // Note: slots after midnight (00:00 to 02:00) represent slots from 1440 mins onwards if treated on same business day
-            return slotStartMins < currentMins;
-        }
-
         function renderTimeline() {
-            const dateObj = new Date(state.selectedDate + 'T00:00:00');
-            const dateTitle = dateObj.toLocaleDateString('id-ID', {
+            const dateTitle = new Date(state.selectedDate + 'T00:00:00').toLocaleDateString('id-ID', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
             });
-            document.getElementById('current-view-date-title').innerText = `Jadwal Meja (${dateTitle})`;
+            if (document.getElementById('current-view-date-title')) {
+                document.getElementById('current-view-date-title').innerText = `Jadwal Meja (${dateTitle})`;
+            }
 
             const headersContainer = document.getElementById('hour-headers-container');
-            headersContainer.innerHTML = '';
-            for (let h = 0; h < 16; h++) {
-                const slotIndex = h * 4;
-                const timeLabel = slotIndexToTime(slotIndex);
-                const div = document.createElement('div');
-                div.style.gridColumn = "span 4";
-                div.className = `py-2.5 px-0.5 text-center font-extrabold text-xs border-r border-slate-200 bg-slate-100 text-slate-800 shadow-inner`;
-                div.innerHTML = `<span>${timeLabel}</span>`;
-                headersContainer.appendChild(div);
+            if (headersContainer) {
+                headersContainer.innerHTML = '';
+                for (let h = 0; h < 16; h++) {
+                    const slotIndex = h * 4;
+                    const timeLabel = slotIndexToTime(slotIndex);
+                    const div = document.createElement('div');
+                    div.style.gridColumn = "span 4";
+                    div.className = `py-2.5 px-0.5 text-center font-extrabold text-xs border-r border-slate-200 bg-slate-100 text-slate-800 shadow-inner`;
+                    div.innerHTML = `<span>${timeLabel}</span>`;
+                    headersContainer.appendChild(div);
+                }
             }
 
             const tableContainer = document.getElementById('table-rows-container');
+            if (!tableContainer) return;
             tableContainer.innerHTML = '';
 
-            // Filter non-cancelled active bookings for grid rendering
-            const dayBookings = state.bookings.filter(b => b.date === state.selectedDate && b.status !== "CANCELLED" && b.status !== "DIBATALKAN");
+            const dayBookings = state.bookings.filter(b => b.date === state.selectedDate);
 
             for (let t = 1; t <= 10; t++) {
                 const row = document.createElement('div');
@@ -952,7 +957,7 @@
                 titleCell.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Meja ${t}`;
                 row.appendChild(titleCell);
 
-                const tableBookings = dayBookings.filter(b => b.table === t);
+                const tableBookings = dayBookings.filter(b => b.table === t && b.status !== "CANCELLED");
 
                 let slot = 0;
                 while (slot < TOTAL_SLOTS) {
@@ -964,25 +969,24 @@
                             const slotCell = document.createElement('div');
                             slotCell.style.gridColumn = `span ${blockSpan}`;
                             slotCell.className = "h-full p-1 cursor-pointer transition";
-                            
-                            const isCompleted = activeBooking.status === "COMPLETED" || activeBooking.status === "SELESAI";
-                            const bgStyle = isCompleted 
+
+                            const isPaid = activeBooking.status === "COMPLETED" || activeBooking.status === "PAID";
+                            const bgStyle = isPaid 
                                 ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 text-white shadow-md" 
                                 : "bg-gradient-to-r from-amber-100 to-amber-200 border-amber-400 text-amber-900 shadow-sm";
 
                             const startTimeStr = slotIndexToTime(activeBooking.startSlot);
                             const endTimeStr = slotIndexToTime(activeBooking.startSlot + activeBooking.durationSlots);
-                            const statusText = isCompleted ? "SELESAI" : "DIBOOKING";
 
                             slotCell.innerHTML = `
                                 <div onclick="openManageModal('${activeBooking.id}')" class="${bgStyle} h-full border rounded-xl p-2 flex flex-col justify-between hover:scale-[0.99] transition overflow-hidden">
                                     <div class="flex items-center justify-between text-xs font-bold gap-1">
                                         <span class="truncate max-w-[120px]"><i class="fa-solid fa-user mr-1 text-[10px]"></i>${activeBooking.name}</span>
-                                        <span class="${isCompleted ? 'bg-black/20 text-white' : 'bg-amber-300/80 text-amber-950'} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(activeBooking.totalPrice)}</span>
+                                        <span class="${isPaid ? 'bg-black/20 text-white' : 'bg-amber-300/80 text-amber-950'} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(activeBooking.finalTotal || activeBooking.totalPrice)}</span>
                                     </div>
                                     <div class="flex items-center justify-between text-[11px] font-semibold opacity-95">
                                         <span>${startTimeStr} - ${endTimeStr}</span>
-                                        <span class="font-extrabold text-[9px] uppercase tracking-wider ${isCompleted ? 'bg-white/20' : 'bg-amber-400/40'} px-1 rounded shrink-0">${statusText}</span>
+                                        <span class="font-extrabold text-[9px] uppercase tracking-wider ${isPaid ? 'bg-white/20' : 'bg-amber-400/40'} px-1 rounded shrink-0">${isPaid ? 'LUNAS' : 'BOOKING'}</span>
                                     </div>
                                 </div>
                             `;
@@ -994,61 +998,22 @@
                     } else {
                         const emptyCell = document.createElement('div');
                         const isHourBorder = (slot + 1) % 4 === 0;
-                        const past = isSlotInPast(slot, state.selectedDate);
+                        const isPast = isSlotPast(state.selectedDate, slot);
 
-                        if (past) {
-                            emptyCell.className = `h-full ${isHourBorder ? 'border-r border-slate-300' : 'border-r border-slate-200'} bg-slate-100/70 cursor-not-allowed flex items-center justify-center text-slate-300 text-[10px]`;
-                            emptyCell.title = "Waktu sudah lewat";
-                            emptyCell.innerHTML = `<i class="fa-solid fa-ban opacity-40"></i>`;
+                        if (isPast) {
+                            emptyCell.className = `h-full ${isHourBorder ? 'border-r border-slate-300' : 'border-r border-slate-100'} bg-slate-100/70 cursor-not-allowed flex items-center justify-center text-slate-300 text-[10px]`;
+                            emptyCell.title = "Waktu telah berlalu";
                         } else {
                             emptyCell.className = `h-full ${isHourBorder ? 'border-r border-slate-300' : 'border-r border-slate-100'} hover:bg-emerald-50/80 cursor-pointer transition flex items-center justify-center text-slate-300 hover:text-emerald-600 text-[10px]`;
                             const targetSlot = slot;
                             emptyCell.onclick = () => openBookingModalForSlot(t, targetSlot);
                             emptyCell.innerHTML = `<i class="fa-solid fa-plus opacity-0 hover:opacity-100 transition"></i>`;
                         }
-                        
                         row.appendChild(emptyCell);
                         slot++;
                     }
                 }
-
                 tableContainer.appendChild(row);
-            }
-        }
-
-        function populateDurationOptions() {
-            const select = document.getElementById('form-duration-slots');
-            select.innerHTML = '';
-            // Duration starting 1 hour (4 slots of 15 min) up to 8 hours (32 slots) in 30-min increments (2 slots)
-            for (let s = 4; s <= 32; s += 2) {
-                const hours = s * 0.25;
-                const opt = document.createElement('option');
-                opt.value = s;
-                opt.innerText = hours % 1 === 0 ? `${hours} Jam` : `${hours} Jam`;
-                select.appendChild(opt);
-            }
-        }
-
-        function populateStartTimes() {
-            const select = document.getElementById('form-start-slot');
-            select.innerHTML = '';
-            let firstValid = null;
-
-            for (let s = 0; s < TOTAL_SLOTS; s++) {
-                const past = isSlotInPast(s, state.selectedDate);
-                const opt = document.createElement('option');
-                opt.value = s;
-                opt.innerText = slotIndexToTime(s) + (past ? " (Lewat)" : "");
-                if (past) {
-                    opt.disabled = true;
-                } else if (firstValid === null) {
-                    firstValid = s;
-                }
-                select.appendChild(opt);
-            }
-
-            if (firstValid !== null) {
-                select.value = firstValid;
             }
         }
 
@@ -1056,48 +1021,84 @@
             populateStartTimes();
             populateDurationOptions();
             calculateFormPrice();
-            document.getElementById('modal-create-booking').classList.remove('hidden');
+            document.getElementById('modal-create-booking')?.classList.remove('hidden');
         }
 
         function openBookingModalForSlot(tableNum, startSlot) {
-            document.getElementById('form-table').value = tableNum;
+            if (document.getElementById('form-table')) document.getElementById('form-table').value = tableNum;
             populateStartTimes();
             populateDurationOptions();
-            if (!isSlotInPast(startSlot, state.selectedDate)) {
-                document.getElementById('form-start-slot').value = startSlot;
-            }
+            if (document.getElementById('form-start-slot')) document.getElementById('form-start-slot').value = startSlot;
             calculateFormPrice();
-            document.getElementById('modal-create-booking').classList.remove('hidden');
+            document.getElementById('modal-create-booking')?.classList.remove('hidden');
         }
 
         function closeBookingModal() {
-            document.getElementById('modal-create-booking').classList.add('hidden');
+            document.getElementById('modal-create-booking')?.classList.add('hidden');
+        }
+
+        function populateStartTimes() {
+            const select = document.getElementById('form-start-slot');
+            if (!select) return;
+            select.innerHTML = '';
+            for (let s = 0; s < TOTAL_SLOTS; s++) {
+                const opt = document.createElement('option');
+                opt.value = s;
+                opt.innerText = slotIndexToTime(s);
+                if (isSlotPast(state.selectedDate, s)) {
+                    opt.disabled = true;
+                    opt.innerText += " (Terlewat)";
+                }
+                select.appendChild(opt);
+            }
+        }
+
+        function populateDurationOptions() {
+            const select = document.getElementById('form-duration-slots');
+            if (!select) return;
+            select.innerHTML = '';
+            
+            // Minimal 1 Jam (4 slot @ 15m), increment 30 menit (2 slot)
+            for (let slots = 4; slots <= 32; slots += 2) {
+                const hrs = slots * 0.25;
+                const opt = document.createElement('option');
+                opt.value = slots;
+                opt.innerText = `${hrs} Jam`;
+                select.appendChild(opt);
+            }
         }
 
         function calculateFormPrice() {
-            const startSlot = parseInt(document.getElementById('form-start-slot').value) || 0;
-            const durationSlots = parseInt(document.getElementById('form-duration-slots').value) || 4;
-            
+            const startSlot = parseInt(document.getElementById('form-start-slot')?.value || 0);
+            const durationSlots = parseInt(document.getElementById('form-duration-slots')?.value || 4);
+
             const hours = durationSlots * 0.25;
             const dayRate = getHourlyRateForDate(state.selectedDate);
             const total = hours * dayRate;
-            
+
             const endSlot = startSlot + durationSlots;
             const previewElem = document.getElementById('form-end-time-preview');
 
-            if (endSlot > TOTAL_SLOTS) {
-                previewElem.innerText = "Melewati 02:00 AM";
-                previewElem.className = "text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl text-center border border-rose-200";
-            } else {
-                const endTimeStr = slotIndexToTime(endSlot);
-                previewElem.innerText = `Selesai: ${endTimeStr}`;
-                previewElem.className = "text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200";
+            if (previewElem) {
+                if (endSlot > TOTAL_SLOTS) {
+                    previewElem.innerText = "Melewati 02:00 AM";
+                    previewElem.className = "text-xs font-bold text-rose-600 bg-rose-50 p-2.5 rounded-xl text-center border border-rose-200";
+                } else {
+                    const endTimeStr = slotIndexToTime(endSlot);
+                    previewElem.innerText = `Selesai: ${endTimeStr}`;
+                    previewElem.className = "text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200";
+                }
             }
 
-            const hrsLabel = `${hours} Jam`;
-            document.getElementById('form-day-info').innerText = `Tarif ${getDayKey(state.selectedDate)} (${formatIDR(dayRate)}/jam)`;
-            document.getElementById('form-calculated-rate').innerText = `${hrsLabel} × ${formatIDR(dayRate)}/jam`;
-            document.getElementById('form-total-price').innerText = formatIDR(total);
+            if (document.getElementById('form-day-info')) {
+                document.getElementById('form-day-info').innerText = `Tarif ${getDayKey(state.selectedDate)} (${formatIDR(dayRate)}/jam)`;
+            }
+            if (document.getElementById('form-calculated-rate')) {
+                document.getElementById('form-calculated-rate').innerText = `${hours} jam × ${formatIDR(dayRate)}`;
+            }
+            if (document.getElementById('form-total-price')) {
+                document.getElementById('form-total-price').innerText = formatIDR(total);
+            }
         }
 
         function handleCreateBooking(e) {
@@ -1109,29 +1110,24 @@
             const durationSlots = parseInt(document.getElementById('form-duration-slots').value);
             const notes = document.getElementById('form-notes').value.trim();
 
-            if (isSlotInPast(startSlot, state.selectedDate)) {
-                showCustomToast("Waktu mulai telah lewat. Silakan pilih slot jam lain.", "error");
-                return;
-            }
-
             const endSlot = startSlot + durationSlots;
             if (endSlot > TOTAL_SLOTS) {
-                showCustomToast("Durasi main melebihi jam tutup operasional (02:00 AM).", "error");
+                showCustomToast("Durasi booking melebihi jam tutup (02:00 AM).", "error");
                 return;
             }
 
-            const existingBookings = state.bookings.filter(b => b.date === state.selectedDate && b.table === table && b.status !== "CANCELLED" && b.status !== "DIBATALKAN");
+            const existingBookings = state.bookings.filter(b => b.date === state.selectedDate && b.table === table && b.status !== "CANCELLED");
             for (let b of existingBookings) {
                 const bEnd = b.startSlot + b.durationSlots;
                 if (startSlot < bEnd && endSlot > b.startSlot) {
-                    showCustomToast(`Meja ${table} sudah dibooking jam ${slotIndexToTime(b.startSlot)} - ${slotIndexToTime(bEnd)}`, "error");
+                    showCustomToast(`Meja ${table} sudah terbooking pada jam ${slotIndexToTime(b.startSlot)} - ${slotIndexToTime(bEnd)}`, "error");
                     return;
                 }
             }
 
             const hours = durationSlots * 0.25;
             const dayRate = getHourlyRateForDate(state.selectedDate);
-            const basePrice = hours * dayRate;
+            const tableFee = hours * dayRate;
 
             const newBooking = {
                 id: "BK-" + Math.floor(1000 + Math.random() * 9000),
@@ -1142,85 +1138,26 @@
                 startSlot: startSlot,
                 durationSlots: durationSlots,
                 hourlyRate: dayRate,
-                basePrice: basePrice,
-                fbItems: [],
+                tableFee: tableFee,
+                items: [],
                 googleReviewDiscount: false,
+                autoDiscountAmount: 0,
+                finalTotal: tableFee,
+                status: "BOOKED",
                 notes: notes,
-                totalPrice: basePrice,
-                status: "DIBOOKING",
-                createdTime: new Date().toISOString()
+                createdTime: new Date().toISOString(),
+                completedOrCancelledTime: null
             };
 
             state.bookings.push(newBooking);
-            saveBookings();
+            saveCloudBooking(newBooking);
             closeBookingModal();
             renderTimeline();
-            showCustomToast(`Meja ${table} berhasil dibooking untuk ${name}!`, "success");
+            showCustomToast(`Meja ${table} berhasil dikunci untuk ${name}!`, "success");
 
             document.getElementById('form-name').value = '';
             document.getElementById('form-phone').value = '';
             document.getElementById('form-notes').value = '';
-        }
-
-        function calculateActiveBookingTotals(booking) {
-            const durationHours = booking.durationSlots * 0.25;
-            const tableFee = booking.basePrice || (durationHours * booking.hourlyRate);
-
-            // Calculate F&B Subtotal
-            let fbTotal = 0;
-            if (booking.fbItems && booking.fbItems.length > 0) {
-                booking.fbItems.forEach(item => {
-                    fbTotal += (item.price * item.qty);
-                });
-            }
-
-            const grossTotal = tableFee + fbTotal;
-            let discountTotal = 0;
-            let autoDiscountText = "";
-
-            // 1. Google Review Discount 5% (if enabled globally & applied)
-            if (state.googleReviewEnabled && booking.googleReviewDiscount) {
-                discountTotal += grossTotal * 0.05;
-            }
-
-            // 2. Automatic Duration Discount Rules
-            const dayKey = getDayKey(booking.date);
-            const isWeekend = (dayKey === 'Fri' || dayKey === 'Sat' || dayKey === 'Sun');
-
-            let bestAutoDisc = 0;
-            state.discountRules.forEach(rule => {
-                if (!rule.enabled) return;
-                
-                let dayMatches = false;
-                if (rule.days === 'ALL') dayMatches = true;
-                else if (rule.days === 'WEEKEND' && isWeekend) dayMatches = true;
-                else if (rule.days === 'WEEKDAY' && !isWeekend) dayMatches = true;
-
-                if (dayMatches && durationHours >= rule.minHours) {
-                    let discVal = 0;
-                    if (rule.type === 'PERCENT') {
-                        discVal = grossTotal * (rule.value / 100);
-                    } else {
-                        discVal = rule.value;
-                    }
-                    if (discVal > bestAutoDisc) {
-                        bestAutoDisc = discVal;
-                        autoDiscountText = `Diskon Durasi (≥${rule.minHours} Jam): -${rule.type === 'PERCENT' ? rule.value + '%' : formatIDR(rule.value)}`;
-                    }
-                }
-            });
-
-            discountTotal += bestAutoDisc;
-            const finalPrice = Math.max(0, grossTotal - discountTotal);
-
-            return {
-                tableFee,
-                fbTotal,
-                grossTotal,
-                discountTotal,
-                autoDiscountText,
-                finalPrice
-            };
         }
 
         function openManageModal(bookingId) {
@@ -1228,218 +1165,273 @@
             if (!booking) return;
 
             state.activeBookingId = bookingId;
+            state.currentFBItems = booking.items ? [...booking.items] : [];
 
             const startStr = slotIndexToTime(booking.startSlot);
             const endStr = slotIndexToTime(booking.startSlot + booking.durationSlots);
             const durationHrs = booking.durationSlots * 0.25;
 
-            document.getElementById('modal-manage-id').innerText = `ID Pemesanan: #${booking.id}`;
-            document.getElementById('modal-manage-table').innerText = `Detail Meja ${booking.table}`;
-            document.getElementById('modal-manage-name').innerText = booking.name;
-            document.getElementById('modal-manage-phone').innerText = booking.phone + (booking.notes ? ` (${booking.notes})` : '');
-            document.getElementById('modal-manage-time').innerText = `${startStr} s/d ${endStr} (${booking.date})`;
-            document.getElementById('modal-manage-duration').innerText = `${durationHrs} Jam @ ${formatIDR(booking.hourlyRate)}/jam`;
-            document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.basePrice);
+            if (document.getElementById('modal-manage-id')) document.getElementById('modal-manage-id').innerText = `ID Booking: #${booking.id}`;
+            if (document.getElementById('modal-manage-table')) document.getElementById('modal-manage-table').innerText = `Detail Meja ${booking.table}`;
+            if (document.getElementById('modal-manage-name')) document.getElementById('modal-manage-name').innerText = booking.name;
+            if (document.getElementById('modal-manage-phone')) document.getElementById('modal-manage-phone').innerText = booking.phone;
+            if (document.getElementById('modal-manage-time')) document.getElementById('modal-manage-time').innerText = `${startStr} s/d ${endStr} (${booking.date})`;
+            if (document.getElementById('modal-manage-duration')) document.getElementById('modal-manage-duration').innerText = `${durationHrs} Jam @ ${formatIDR(booking.hourlyRate)}/jam`;
+            if (document.getElementById('modal-manage-base-price')) document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.tableFee);
 
-            // Populate F&B Dropdown Select
-            const fbSelect = document.getElementById('modal-fb-select');
-            fbSelect.innerHTML = '';
+            // Tampilkan Pilihan F&B
+            populateFBPicker();
+            renderCurrentFBList();
+
+            // Sediakan Opsi Diskon
+            const googleBox = document.getElementById('container-google-discount');
+            if (googleBox) {
+                if (state.settings.googleReviewDiscountEnabled) {
+                    googleBox.classList.remove('hidden');
+                    const chk = document.getElementById('modal-chk-google-discount');
+                    if (chk) chk.checked = !!booking.googleReviewDiscount;
+                } else {
+                    googleBox.classList.add('hidden');
+                }
+            }
+
+            recalculateManageSummary();
+
+            const statusBadge = document.getElementById('modal-manage-status');
+            const actionsDiv = document.getElementById('modal-manage-actions');
+            const lockedMsg = document.getElementById('modal-manage-locked-msg');
+            const fbSection = document.getElementById('section-fb-selection');
+
+            const isLocked = booking.status === 'COMPLETED' || booking.status === 'PAID';
+
+            if (statusBadge) {
+                statusBadge.className = isLocked 
+                    ? "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300"
+                    : "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300";
+                statusBadge.innerText = isLocked ? "SELESAI & LUNAS" : "BOOKED (BELUM BAYAR)";
+            }
+
+            if (isLocked) {
+                actionsDiv?.classList.add('hidden');
+                fbSection?.classList.add('hidden');
+                lockedMsg?.classList.remove('hidden');
+            } else {
+                actionsDiv?.classList.remove('hidden');
+                fbSection?.classList.remove('hidden');
+                lockedMsg?.classList.add('hidden');
+            }
+
+            document.getElementById('modal-manage-booking')?.classList.remove('hidden');
+        }
+
+        function populateFBPicker() {
+            const picker = document.getElementById('modal-fb-picker');
+            if (!picker) return;
+            picker.innerHTML = '';
             state.products.forEach(p => {
                 const opt = document.createElement('option');
                 opt.value = p.id;
                 opt.innerText = `${p.name} - ${formatIDR(p.price)}`;
-                fbSelect.appendChild(opt);
-            });
-
-            // Set Google Review Discount checkbox
-            const gToggle = document.getElementById('modal-toggle-google-discount');
-            const gToggleContainer = document.getElementById('container-google-discount-toggle');
-            gToggle.checked = !!booking.googleReviewDiscount;
-            
-            if (!state.googleReviewEnabled) {
-                gToggleContainer.classList.add('hidden');
-            } else {
-                gToggleContainer.classList.remove('hidden');
-            }
-
-            renderFBItemList();
-            updateCalculatedFinalPrice();
-
-            // Status UI updates
-            const statusBadge = document.getElementById('modal-manage-status');
-            const actionsDiv = document.getElementById('modal-manage-actions');
-            const completedSec = document.getElementById('modal-manage-completed-section');
-            const cancelledSec = document.getElementById('modal-manage-cancelled-section');
-            const secFB = document.getElementById('section-fb-add');
-            const secDisc = document.getElementById('section-discounts');
-
-            if (booking.status === 'COMPLETED' || booking.status === 'SELESAI') {
-                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
-                statusBadge.innerText = "SELESAI & LUNAS";
-                actionsDiv.classList.add('hidden');
-                secFB.classList.add('hidden');
-                secDisc.classList.add('hidden');
-                completedSec.classList.remove('hidden');
-                cancelledSec.classList.add('hidden');
-            } else if (booking.status === 'CANCELLED' || booking.status === 'DIBATALKAN') {
-                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300";
-                statusBadge.innerText = "DIBATALKAN";
-                actionsDiv.classList.add('hidden');
-                secFB.classList.add('hidden');
-                secDisc.classList.add('hidden');
-                completedSec.classList.add('hidden');
-                cancelledSec.classList.remove('hidden');
-            } else {
-                statusBadge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300";
-                statusBadge.innerText = "DIBOOKING (BELUM BAYAR)";
-                actionsDiv.classList.remove('hidden');
-                secFB.classList.remove('hidden');
-                secDisc.classList.remove('hidden');
-                completedSec.classList.add('hidden');
-                cancelledSec.classList.add('hidden');
-            }
-
-            document.getElementById('modal-manage-booking').classList.remove('hidden');
-        }
-
-        function renderFBItemList() {
-            if (!state.activeBookingId) return;
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking) return;
-
-            const listElem = document.getElementById('modal-fb-list');
-            listElem.innerHTML = '';
-
-            if (!booking.fbItems || booking.fbItems.length === 0) {
-                listElem.innerHTML = `<span class="text-slate-400 italic text-[11px]">Belum ada pesanan F&B.</span>`;
-                return;
-            }
-
-            booking.fbItems.forEach((item, index) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.className = "flex items-center justify-between bg-white border border-emerald-200 px-3 py-1.5 rounded-xl text-xs";
-                itemDiv.innerHTML = `
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-800">${item.name}</span>
-                        <span class="text-slate-500 font-mono">(${item.qty}x)</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <span class="font-bold text-emerald-700 font-mono">${formatIDR(item.price * item.qty)}</span>
-                        ${booking.status === 'DIBOOKING' ? `<button onclick="removeFBItemFromActiveBooking(${index})" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash-can"></i></button>` : ''}
-                    </div>
-                `;
-                listElem.appendChild(itemDiv);
+                picker.appendChild(opt);
             });
         }
 
-        function addFBItemToActiveBooking() {
-            if (!state.activeBookingId) return;
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking || (booking.status !== 'DIBOOKING')) return;
+        function addSelectedFBItem() {
+            const picker = document.getElementById('modal-fb-picker');
+            const qtyInput = document.getElementById('modal-fb-qty');
+            if (!picker || !qtyInput) return;
 
-            const prodId = document.getElementById('modal-fb-select').value;
-            const qty = parseInt(document.getElementById('modal-fb-qty').value) || 1;
-            const product = state.products.find(p => p.id === prodId);
+            const prodId = picker.value;
+            const qty = parseInt(qtyInput.value) || 1;
+            const prod = state.products.find(p => p.id === prodId);
+            if (!prod) return;
 
-            if (!product) return;
-            if (!booking.fbItems) booking.fbItems = [];
-
-            const existing = booking.fbItems.find(i => i.id === prodId);
+            const existing = state.currentFBItems.find(i => i.id === prodId);
             if (existing) {
                 existing.qty += qty;
             } else {
-                booking.fbItems.push({
-                    id: product.id,
-                    name: product.name,
-                    price: product.price,
+                state.currentFBItems.push({
+                    id: prod.id,
+                    name: prod.name,
+                    price: prod.price,
                     qty: qty
                 });
             }
 
-            saveBookings();
-            renderFBItemList();
-            updateCalculatedFinalPrice();
+            renderCurrentFBList();
+            recalculateManageSummary();
         }
 
-        function removeFBItemFromActiveBooking(index) {
-            if (!state.activeBookingId) return;
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking || (booking.status !== 'DIBOOKING')) return;
-
-            booking.fbItems.splice(index, 1);
-            saveBookings();
-            renderFBItemList();
-            updateCalculatedFinalPrice();
+        function removeFBItem(index) {
+            state.currentFBItems.splice(index, 1);
+            renderCurrentFBList();
+            recalculateManageSummary();
         }
 
-        function toggleGoogleDiscountForBooking() {
-            if (!state.activeBookingId) return;
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking) return;
+        function renderCurrentFBList() {
+            const container = document.getElementById('modal-fb-list-container');
+            if (!container) return;
+            container.innerHTML = '';
 
-            booking.googleReviewDiscount = document.getElementById('modal-toggle-google-discount').checked;
-            saveBookings();
-            updateCalculatedFinalPrice();
-        }
-
-        function updateCalculatedFinalPrice() {
-            if (!state.activeBookingId) return;
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking) return;
-
-            const calc = calculateActiveBookingTotals(booking);
-            booking.totalPrice = calc.finalPrice;
-
-            document.getElementById('summary-table-fee').innerText = formatIDR(calc.tableFee);
-            document.getElementById('summary-fb-total').innerText = formatIDR(calc.fbTotal);
-            document.getElementById('summary-discount-total').innerText = `- ${formatIDR(calc.discountTotal)}`;
-            document.getElementById('modal-manage-final-price').innerText = formatIDR(calc.finalPrice);
-
-            const autoBanner = document.getElementById('auto-discount-banner');
-            if (calc.autoDiscountText) {
-                document.getElementById('auto-discount-text').innerText = calc.autoDiscountText;
-                autoBanner.classList.remove('hidden');
-            } else {
-                autoBanner.classList.add('hidden');
+            if (state.currentFBItems.length === 0) {
+                container.innerHTML = `<span class="text-[11px] text-slate-400 italic">Belum ada item F&B ditambahkan.</span>`;
+                return;
             }
+
+            state.currentFBItems.forEach((item, idx) => {
+                const subtotal = item.price * item.qty;
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between text-xs bg-white p-2 rounded-xl border border-slate-200";
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-slate-800">${item.name}</span>
+                        <span class="text-slate-500 font-mono text-[11px]">x${item.qty} (@ ${formatIDR(item.price)})</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-emerald-700">${formatIDR(subtotal)}</span>
+                        <button onclick="removeFBItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function recalculateManageSummary() {
+            if (!state.activeBookingId) return;
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            const tableFee = booking.tableFee || 0;
+            const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const subtotal = tableFee + fbFee;
+
+            // Diskon Ulasan Google (5%)
+            let googleDiscountAmt = 0;
+            const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
+            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
+            }
+
+            // Diskon Durasi Otomatis
+            let autoDiscountAmt = 0;
+            let autoDiscountLabel = "Tidak ada";
+            const durationHrs = booking.durationSlots * 0.25;
+            const dayKey = getDayKey(booking.date);
+            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+
+            const matchedRule = state.discountRules
+                .filter(r => r.enabled && durationHrs >= r.minHours)
+                .filter(r => {
+                    if (r.days === 'ALL') return true;
+                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
+                    if (r.days === 'WEEKEND' && isWeekend) return true;
+                    return false;
+                })
+                .sort((a, b) => b.minHours - a.minHours)[0];
+
+            if (matchedRule) {
+                if (matchedRule.type === 'PERCENT') {
+                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
+                    autoDiscountLabel = `${matchedRule.value}% (Durasi ≥ ${matchedRule.minHours} jam)`;
+                } else {
+                    autoDiscountAmt = matchedRule.value;
+                    autoDiscountLabel = `${formatIDR(matchedRule.value)} (Durasi ≥ ${matchedRule.minHours} jam)`;
+                }
+            }
+
+            if (document.getElementById('value-auto-discount-rule')) {
+                document.getElementById('value-auto-discount-rule').innerText = autoDiscountLabel;
+            }
+
+            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
+            const finalTotal = Math.max(0, subtotal - totalDiscount);
+
+            if (document.getElementById('summary-table-fee')) document.getElementById('summary-table-fee').innerText = formatIDR(tableFee);
+            if (document.getElementById('summary-fb-fee')) document.getElementById('summary-fb-fee').innerText = formatIDR(fbFee);
+            if (document.getElementById('summary-discount-fee')) document.getElementById('summary-discount-fee').innerText = `- ${formatIDR(totalDiscount)}`;
+            if (document.getElementById('summary-final-total')) document.getElementById('summary-final-total').innerText = formatIDR(finalTotal);
         }
 
         function closeManageModal() {
-            document.getElementById('modal-manage-booking').classList.add('hidden');
+            document.getElementById('modal-manage-booking')?.classList.add('hidden');
         }
 
         function confirmBookingPayment() {
             if (!state.activeBookingId) return;
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
 
-            if (booking) {
-                const calc = calculateActiveBookingTotals(booking);
-                booking.totalPrice = calc.finalPrice;
-                booking.status = "SELESAI";
-                booking.confirmedAt = new Date().toISOString();
+            const tableFee = booking.tableFee || 0;
+            const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const subtotal = tableFee + fbFee;
 
-                saveBookings();
-                closeManageModal();
-                renderTimeline();
-                showCustomToast(`Pembayaran berhasil dikonfirmasi! Total: ${formatIDR(booking.totalPrice)}`, "success");
+            let googleDiscountAmt = 0;
+            const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
+            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
             }
+
+            let autoDiscountAmt = 0;
+            const durationHrs = booking.durationSlots * 0.25;
+            const dayKey = getDayKey(booking.date);
+            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+
+            const matchedRule = state.discountRules
+                .filter(r => r.enabled && durationHrs >= r.minHours)
+                .filter(r => {
+                    if (r.days === 'ALL') return true;
+                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
+                    if (r.days === 'WEEKEND' && isWeekend) return true;
+                    return false;
+                })
+                .sort((a, b) => b.minHours - a.minHours)[0];
+
+            if (matchedRule) {
+                if (matchedRule.type === 'PERCENT') {
+                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
+                } else {
+                    autoDiscountAmt = matchedRule.value;
+                }
+            }
+
+            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
+            const finalTotal = Math.max(0, subtotal - totalDiscount);
+
+            booking.items = [...state.currentFBItems];
+            booking.googleReviewDiscount = !!isGoogleChecked;
+            booking.autoDiscountAmount = autoDiscountAmt;
+            booking.totalDiscount = totalDiscount;
+            booking.finalTotal = finalTotal;
+            booking.status = "COMPLETED";
+            booking.completedOrCancelledTime = new Date().toISOString();
+
+            saveCloudBooking(booking);
+            closeManageModal();
+            renderTimeline();
+            renderTransactions();
+            showCustomToast(`Pembayaran dikonfirmasi! ${formatIDR(finalTotal)} telah dicatat Lunas.`, "success");
         }
 
-        function promptCancelBooking() {
-            document.getElementById('cancel-pin-input').value = '';
-            document.getElementById('cancel-pin-error').classList.add('hidden');
-            document.getElementById('modal-pin-prompt').classList.remove('hidden');
+        function openPinModalForCancel() {
+            if (document.getElementById('cancel-pin-input')) document.getElementById('cancel-pin-input').value = '';
+            document.getElementById('cancel-pin-err')?.classList.add('hidden');
+            document.getElementById('modal-pin-cancel')?.classList.remove('hidden');
         }
 
-        function closePinPrompt() {
-            document.getElementById('cancel-pin-input').value = '';
-            document.getElementById('modal-pin-prompt').classList.add('hidden');
+        function closePinModalForCancel() {
+            document.getElementById('modal-pin-cancel')?.classList.add('hidden');
         }
 
-        function executeBookingCancellation() {
-            const inputPin = document.getElementById('cancel-pin-input').value;
+        function executeBookingCancellation(e) {
+            e.preventDefault();
+            const inputPin = document.getElementById('cancel-pin-input')?.value;
+
             if (inputPin !== state.ownerPin) {
-                document.getElementById('cancel-pin-error').classList.remove('hidden');
+                const err = document.getElementById('cancel-pin-err');
+                if (err) {
+                    err.innerText = "PIN Pemilik salah. Coba lagi.";
+                    err.classList.remove('hidden');
+                }
                 return;
             }
 
@@ -1447,24 +1439,32 @@
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
 
             if (booking) {
-                booking.status = "DIBATALKAN";
-                booking.totalPrice = 0;
-                booking.cancelledAt = new Date().toISOString();
-                saveBookings();
-                closePinPrompt();
+                booking.status = "CANCELLED";
+                booking.finalTotal = 0; // Pemesanan dibatalkan bernilai Rp 0
+                booking.completedOrCancelledTime = new Date().toISOString();
+
+                saveCloudBooking(booking);
+                closePinModalForCancel();
                 closeManageModal();
                 renderTimeline();
-                showCustomToast("Pemesanan telah DIBATALKAN (Total Bayar Rp 0).", "info");
+                renderTransactions();
+                showCustomToast("Pemesanan berhasil dibatalkan dan meja telah dilepaskan.", "info");
             }
         }
+
+        function handlePrintReceipt() {
+            showCustomToast("Fungsi Cetak Struk siap digunakan untuk integrasi printer.", "info");
+        }
+
 
         function renderTransactions() {
             const startDate = document.getElementById('trans-start-date')?.value || state.selectedDate;
             const endDate = document.getElementById('trans-end-date')?.value || state.selectedDate;
 
-            let filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+            const filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
 
             const tbody = document.getElementById('trans-table-body');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             let totalRev = 0;
@@ -1476,54 +1476,34 @@
                     <tr>
                         <td colspan="13" class="py-8 text-center text-slate-400 font-medium">
                             <i class="fa-solid fa-receipt text-3xl mb-2 block opacity-40"></i>
-                            Tidak ada transaksi untuk rentang tanggal ${startDate} s/d ${endDate}
+                            Tidak ada transaksi ditemukan pada rentang tanggal ${startDate} s/d ${endDate}
                         </td>
                     </tr>
                 `;
             } else {
                 filteredBookings.forEach(b => {
-                    const calc = calculateActiveBookingTotals(b);
                     const durationHrs = b.durationSlots * 0.25;
-                    const isCancelled = b.status === "DIBATALKAN" || b.status === "CANCELLED";
-                    const finalPayTotal = isCancelled ? 0 : b.totalPrice;
+                    const isCompleted = b.status === "COMPLETED" || b.status === "PAID";
+                    const isCancelled = b.status === "CANCELLED";
 
-                    if (b.status === "SELESAI" || b.status === "COMPLETED") {
-                        totalRev += finalPayTotal;
+                    if (isCompleted) {
+                        totalRev += (b.finalTotal || b.totalPrice || 0);
                         totalHours += durationHrs;
                         completedCount++;
                     }
 
-                    const createdTimeStr = b.createdTime ? formatDateTime(b.createdTime) : '-';
                     const startStr = slotIndexToTime(b.startSlot);
                     const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
-                    const finishOrCancelTime = b.confirmedAt ? formatDateTime(b.confirmedAt) : (b.cancelledAt ? formatDateTime(b.cancelledAt) : '-');
 
-                    // Format Tanggal & Jam Booking (misal: 26/08/2026 14:00 - 16:00)
-                    const dateParts = b.date ? b.date.split('-') : [];
-                    const formattedBookingDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : b.date;
-                    const bookingTimeStr = `${formattedBookingDate} ${startStr} - ${endStr}`;
-
-                    let statusBadgeClass = "bg-amber-100 text-amber-800 border-amber-300";
-                    let statusLabel = "DIBOOKING";
-
-                    if (b.status === "SELESAI" || b.status === "COMPLETED") {
-                        statusBadgeClass = "bg-emerald-100 text-emerald-800 border-emerald-300";
-                        statusLabel = "SELESAI";
-                    } else if (isCancelled) {
-                        statusBadgeClass = "bg-rose-100 text-rose-800 border-rose-300";
-                        statusLabel = "DIBATALKAN";
+                    // Rincian Detail F&B
+                    let fbDetailsText = '-';
+                    if (b.items && b.items.length > 0) {
+                        fbDetailsText = b.items.map(i => `${i.name} (x${i.qty} @ ${formatIDR(i.price)} = ${formatIDR(i.price * i.qty)})`).join('<br>');
                     }
 
-                    // Format rincian F&B (Nama, Qty, Harga Satuan, dan Subtotal)
-                    let fbDetailsHTML = '<span class="text-slate-400 font-sans">-</span>';
-                    if (b.fbItems && b.fbItems.length > 0) {
-                        fbDetailsHTML = b.fbItems.map(item => 
-                            `<div class="text-[11px] leading-tight mb-0.5"><span class="font-bold text-slate-800">${item.name}</span> <span class="text-slate-500 font-sans">(${item.qty}x @ ${formatIDR(item.price)})</span> = <span class="font-mono text-emerald-700 font-bold">${formatIDR(item.price * item.qty)}</span></div>`
-                        ).join('');
-                        if (b.fbItems.length > 1) {
-                            fbDetailsHTML += `<div class="text-[10px] font-bold font-mono text-slate-600 border-t border-slate-200 pt-0.5 mt-0.5 text-right">Total: ${formatIDR(calc.fbTotal)}</div>`;
-                        }
-                    }
+                    const formattedTableFee = formatIDR(b.tableFee || b.basePrice || 0);
+                    const formattedDiscount = b.totalDiscount ? `- ${formatIDR(b.totalDiscount)}` : '-';
+                    const formattedFinalTotal = isCancelled ? `<span class="line-through text-slate-400">Rp 0</span>` : formatIDR(b.finalTotal || b.totalPrice || 0);
 
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
@@ -1532,32 +1512,38 @@
                         <td class="py-3.5 px-4 font-bold text-slate-900">${b.name}</td>
                         <td class="py-3.5 px-4 font-mono text-slate-600 text-xs">${b.phone}</td>
                         <td class="py-3.5 px-4 font-bold text-emerald-700">Meja ${b.table}</td>
-                        <td class="py-3.5 px-4 font-mono text-xs text-slate-600">${createdTimeStr}</td>
-                        <td class="py-3.5 px-4 font-mono text-xs text-slate-600">${finishOrCancelTime}</td>
-                        <td class="py-3.5 px-4 font-semibold text-slate-700 font-mono text-xs">${bookingTimeStr}</td>
-                        <td class="py-3.5 px-4 text-slate-600">${durationHrs} Jam</td>
-                        <td class="py-3.5 px-4 text-right font-mono text-slate-500">${formatIDR(calc.tableFee)}</td>
-                        <td class="py-3.5 px-4 text-left font-sans text-xs min-w-[200px]">${fbDetailsHTML}</td>
-                        <td class="py-3.5 px-4 text-right font-mono text-amber-700">- ${formatIDR(calc.discountTotal)}</td>
-                        <td class="py-3.5 px-4 text-right font-mono font-black ${isCancelled ? 'text-slate-400 line-through' : 'text-emerald-700'}">${formatIDR(finalPayTotal)}</td>
+                        <td class="py-3.5 px-4 font-semibold text-slate-700">${b.date} (${startStr} - ${endStr})</td>
+                        <td class="py-3.5 px-4 font-mono text-slate-500 text-xs">${formatDateTime(b.createdTime)}</td>
+                        <td class="py-3.5 px-4 font-mono text-slate-500 text-xs">${formatDateTime(b.completedOrCancelledTime)}</td>
+                        <td class="py-3.5 px-4 text-slate-600">${durationHrs} jam</td>
+                        <td class="py-3.5 px-4 text-right font-mono text-slate-500">${formattedTableFee}</td>
+                        <td class="py-3.5 px-4 text-left font-mono text-xs text-slate-700">${fbDetailsText}</td>
+                        <td class="py-3.5 px-4 text-right font-mono text-xs text-amber-700">${formattedDiscount}</td>
+                        <td class="py-3.5 px-4 text-right font-mono font-black text-emerald-700">${formattedFinalTotal}</td>
                         <td class="py-3.5 px-4 text-center">
-                            <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${statusBadgeClass}">${statusLabel}</span>
+                            ${isCompleted 
+                                ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">COMPLETED</span>`
+                                : isCancelled
+                                ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">CANCELLED</span>`
+                                : `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">BOOKED</span>`
+                            }
                         </td>
                     `;
                     tbody.appendChild(tr);
                 });
             }
 
-            document.getElementById('trans-daily-total').innerText = formatIDR(totalRev);
-            document.getElementById('trans-daily-count').innerText = `${completedCount} Selesai`;
-            document.getElementById('trans-daily-hours').innerText = `${totalHours} Jam`;
-            document.getElementById('trans-count-badge').innerText = `${filteredBookings.length} item`;
+            if (document.getElementById('trans-daily-total')) document.getElementById('trans-daily-total').innerText = formatIDR(totalRev);
+            if (document.getElementById('trans-daily-count')) document.getElementById('trans-daily-count').innerText = `${completedCount} Selesai`;
+            if (document.getElementById('trans-daily-hours')) document.getElementById('trans-daily-hours').innerText = `${totalHours} Jam`;
+            if (document.getElementById('trans-count-badge')) document.getElementById('trans-count-badge').innerText = `${filteredBookings.length} item`;
         }
 
         function exportTransactionsToExcel() {
             const startDate = document.getElementById('trans-start-date')?.value || state.selectedDate;
             const endDate = document.getElementById('trans-end-date')?.value || state.selectedDate;
-            let filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+
+            const filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
 
             if (filteredBookings.length === 0) {
                 showCustomToast("Tidak ada transaksi untuk diekspor pada rentang tanggal ini.", "error");
@@ -1565,188 +1551,80 @@
             }
 
             const excelData = filteredBookings.map(b => {
-                const calc = calculateActiveBookingTotals(b);
-                const isCancelled = b.status === "DIBATALKAN" || b.status === "CANCELLED";
-                const finalPayTotal = isCancelled ? 0 : b.totalPrice;
-                const fbItemsText = (b.fbItems && b.fbItems.length > 0)
-                    ? b.fbItems.map(i => `${i.name} (${i.qty}x @ ${formatIDR(i.price)} = ${formatIDR(i.price * i.qty)})`).join('; ')
-                    : '-';
-                const createdTime = b.createdTime ? formatDateTime(b.createdTime) : '-';
-                const finishOrCancelTime = b.confirmedAt ? formatDateTime(b.confirmedAt) : (b.cancelledAt ? formatDateTime(b.cancelledAt) : '-');
-
-                const dateParts = b.date ? b.date.split('-') : [];
-                const formattedBookingDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}` : b.date;
                 const startStr = slotIndexToTime(b.startSlot);
                 const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
+                const fbText = b.items && b.items.length > 0 
+                    ? b.items.map(i => `${i.name} x${i.qty} (@${i.price})`).join("; ") 
+                    : "Tidak ada";
 
                 return {
-                    "ID Pemesanan": b.id,
+                    "ID Booking": b.id,
                     "Nama Pelanggan": b.name,
                     "Nomor HP": b.phone,
                     "Nomor Meja": `Meja ${b.table}`,
-                    "Waktu Booking (Tanggal & Jam)": `${formattedBookingDate} ${startStr} - ${endStr}`,
-                    "Waktu Pemesanan Dibuat": createdTime,
-                    "Waktu Selesai / Batal": finishOrCancelTime,
+                    "Waktu Booking (Tanggal & Jam)": `${b.date} (${startStr} - ${endStr})`,
+                    "Waktu Dibuat": formatDateTime(b.createdTime),
+                    "Waktu Selesai / Batal": formatDateTime(b.completedOrCancelledTime),
                     "Durasi (Jam)": b.durationSlots * 0.25,
-                    "Biaya Meja (IDR)": calc.tableFee,
-                    "Rincian F&B / Tambahan": fbItemsText,
-                    "Total F&B (IDR)": calc.fbTotal,
-                    "Diskon (IDR)": calc.discountTotal,
-                    "Total Akhir Bayar (IDR)": finalPayTotal,
-                    "Status Pembayaran": (b.status === "SELESAI" || b.status === "COMPLETED") ? "LUNAS" : isCancelled ? "DIBATALKAN" : "BELUM BAYAR",
+                    "Biaya Meja (IDR)": b.tableFee || b.basePrice || 0,
+                    "Rincian F&B / Tambahan": fbText,
+                    "Diskon (IDR)": b.totalDiscount || 0,
+                    "Total Bayar (IDR)": b.status === "CANCELLED" ? 0 : (b.finalTotal || b.totalPrice || 0),
                     "Status Transaksi": b.status,
-                    "Catatan": b.notes || '-'
+                    "Catatan": b.notes || ""
                 };
             });
 
             const worksheet = XLSX.utils.json_to_sheet(excelData);
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Transaksi");
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Transaksi");
 
             const fileName = `Transaksi_Mahjong_${startDate}_sd_${endDate}.xlsx`;
             XLSX.writeFile(workbook, fileName);
-            showCustomToast(`Berhasil mengekspor ${filteredBookings.length} transaksi ke ${fileName}`, "success");
+            showCustomToast(`Berhasil mengekspor ${filteredBookings.length} data transaksi!`, "success");
         }
+
 
         function updateSettingsUI() {
             if (state.settingsUnlocked) {
-                document.getElementById('setting-pin-lock').classList.add('hidden');
-                document.getElementById('setting-panel').classList.remove('hidden');
+                document.getElementById('setting-pin-lock')?.classList.add('hidden');
+                document.getElementById('setting-panel')?.classList.remove('hidden');
 
                 ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
                     const inp = document.getElementById(`rate-${day}`);
                     if (inp) inp.value = state.dayRates[day] || 50000;
                 });
 
-                document.getElementById('setting-google-discount-enabled').checked = state.googleReviewEnabled;
-                document.getElementById('setting-booking-fee-enabled').checked = state.bookingFeeEnabled;
+                const chkGoogle = document.getElementById('setting-google-discount-enabled');
+                if (chkGoogle) chkGoogle.checked = !!state.settings.googleReviewDiscountEnabled;
+
+                const chkBookingFee = document.getElementById('setting-booking-fee-enabled');
+                if (chkBookingFee) chkBookingFee.checked = !!state.settings.bookingFeeEnabled;
+
                 renderProductsTable();
                 renderDiscountRulesTable();
             } else {
-                document.getElementById('pin-input').value = '';
-                document.getElementById('setting-pin-lock').classList.remove('hidden');
-                document.getElementById('setting-panel').classList.add('hidden');
+                document.getElementById('setting-pin-lock')?.classList.remove('hidden');
+                document.getElementById('setting-panel')?.classList.add('hidden');
+                if (document.getElementById('pin-input')) document.getElementById('pin-input').value = '';
             }
-        }
-
-        function toggleBookingFeeSetting() {
-            state.bookingFeeEnabled = document.getElementById('setting-booking-fee-enabled').checked;
-            localStorage.setItem('mj_booking_fee_enabled_v7', state.bookingFeeEnabled);
-            showCustomToast(`Modul Booking Fee ${state.bookingFeeEnabled ? 'diaktifkan' : 'dinonaktifkan'}.`, "info");
-        }
-
-        function handlePrintReceiptUI() {
-            showCustomToast("Tombol Cetak Struk Siap (Fitur printer akan hadir di pembaruan selanjutnya).", "info");
-        }
-
-        function renderProductsTable() {
-            const tbody = document.getElementById('products-table-body');
-            tbody.innerHTML = '';
-            state.products.forEach((p, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-200";
-                tr.innerHTML = `
-                    <td class="p-2.5 font-bold text-slate-800">${p.name}</td>
-                    <td class="p-2.5 text-right font-mono font-bold text-emerald-700">${formatIDR(p.price)}</td>
-                    <td class="p-2.5 text-center">
-                        <button onclick="deleteProduct(${idx})" class="text-rose-600 hover:text-rose-800 font-bold px-2 py-1"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function handleAddProduct(e) {
-            e.preventDefault();
-            const name = document.getElementById('new-product-name').value.trim();
-            const price = parseFloat(document.getElementById('new-product-price').value);
-
-            if (name && price > 0) {
-                state.products.push({ id: "p_" + Date.now(), name, price });
-                saveProducts();
-                renderProductsTable();
-                document.getElementById('new-product-name').value = '';
-                document.getElementById('new-product-price').value = '';
-                showCustomToast("Produk F&B baru berhasil ditambahkan!", "success");
-            }
-        }
-
-        function deleteProduct(idx) {
-            state.products.splice(idx, 1);
-            saveProducts();
-            renderProductsTable();
-            showCustomToast("Produk F&B telah dihapus.", "info");
-        }
-
-        function renderDiscountRulesTable() {
-            const tbody = document.getElementById('discount-rules-table-body');
-            tbody.innerHTML = '';
-            state.discountRules.forEach((r, idx) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-slate-200";
-                const dayLabel = r.days === 'ALL' ? 'Setiap Hari' : r.days === 'WEEKEND' ? 'Weekend' : 'Weekday';
-                const valLabel = r.type === 'PERCENT' ? `${r.value}%` : formatIDR(r.value);
-
-                tr.innerHTML = `
-                    <td class="p-2.5 font-bold text-slate-800">Min. ${r.minHours} Jam</td>
-                    <td class="p-2.5 text-slate-600">${dayLabel}</td>
-                    <td class="p-2.5 text-right font-mono font-bold text-amber-700">${valLabel}</td>
-                    <td class="p-2.5 text-center">
-                        <button onclick="deleteDiscountRule(${idx})" class="text-rose-600 hover:text-rose-800 font-bold px-2 py-1"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function handleAddDiscountRule(e) {
-            e.preventDefault();
-            const minHours = parseFloat(document.getElementById('rule-min-hours').value);
-            const type = document.getElementById('rule-type').value;
-            const value = parseFloat(document.getElementById('rule-value').value);
-            const days = document.getElementById('rule-days').value;
-
-            if (minHours >= 1 && value > 0) {
-                state.discountRules.push({
-                    id: "dr_" + Date.now(),
-                    minHours,
-                    type,
-                    value,
-                    days,
-                    enabled: true
-                });
-                saveDiscountRules();
-                renderDiscountRulesTable();
-                showCustomToast("Aturan diskon otomatis ditambahkan!", "success");
-            }
-        }
-
-        function deleteDiscountRule(idx) {
-            state.discountRules.splice(idx, 1);
-            saveDiscountRules();
-            renderDiscountRulesTable();
-            showCustomToast("Aturan diskon dihapus.", "info");
-        }
-
-        function toggleGoogleReviewDiscountSetting() {
-            state.googleReviewEnabled = document.getElementById('setting-google-discount-enabled').checked;
-            localStorage.setItem('mj_google_disc_enabled_v7', state.googleReviewEnabled);
-            showCustomToast(`Diskon Ulasan Google ${state.googleReviewEnabled ? 'diaktifkan' : 'dinonaktifkan'}.`, "info");
         }
 
         function handlePinSubmit(e) {
             e.preventDefault();
-            const pinVal = document.getElementById('pin-input').value;
+            const pinVal = document.getElementById('pin-input')?.value;
             if (pinVal === state.ownerPin) {
                 state.settingsUnlocked = true;
-                document.getElementById('pin-input').value = '';
-                document.getElementById('pin-error-msg').classList.add('hidden');
+                if (document.getElementById('pin-input')) document.getElementById('pin-input').value = '';
+                document.getElementById('pin-error-msg')?.classList.add('hidden');
                 updateSettingsUI();
-                showCustomToast("Pengaturan Pemilik dibuka.", "success");
+                showCustomToast("Akses Pengaturan Pemilik terbuka.", "success");
             } else {
                 const err = document.getElementById('pin-error-msg');
-                err.innerText = "PIN Keamanan Salah. Silakan coba lagi.";
-                err.classList.remove('hidden');
+                if (err) {
+                    err.innerText = "PIN Keamanan salah. Coba lagi.";
+                    err.classList.remove('hidden');
+                }
             }
         }
 
@@ -1760,31 +1638,150 @@
 
             const newDayRates = {};
             ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(day => {
-                const val = parseFloat(document.getElementById(`rate-${day}`).value);
+                const val = parseFloat(document.getElementById(`rate-${day}`)?.value);
                 newDayRates[day] = val > 0 ? val : 50000;
             });
 
             state.dayRates = newDayRates;
-            localStorage.setItem('mj_day_rates_v7', JSON.stringify(newDayRates));
-            updateHeaderRateDisplay();
 
-            const newPin = document.getElementById('setting-new-pin').value.trim();
-            const confirmPin = document.getElementById('setting-confirm-pin').value.trim();
+            const newPin = document.getElementById('setting-new-pin')?.value.trim();
+            const confirmPin = document.getElementById('setting-confirm-pin')?.value.trim();
 
             if (newPin && newPin.length === 4) {
                 if (newPin === confirmPin) {
                     state.ownerPin = newPin;
-                    localStorage.setItem('mj_owner_pin_v7', newPin);
-                    document.getElementById('setting-new-pin').value = '';
-                    document.getElementById('setting-confirm-pin').value = '';
-                    showCustomToast("Tarif & PIN Keamanan berhasil diperbarui!", "success");
+                    if (document.getElementById('setting-new-pin')) document.getElementById('setting-new-pin').value = '';
+                    if (document.getElementById('setting-confirm-pin')) document.getElementById('setting-confirm-pin').value = '';
+                    showCustomToast("Tarif mingguan & PIN Keamanan berhasil diperbarui!", "success");
                 } else {
-                    showCustomToast("Konfirmasi PIN baru tidak cocok.", "error");
+                    showCustomToast("PIN Baru dan Konfirmasi PIN tidak cocok.", "error");
                     return;
                 }
             } else {
-                showCustomToast("Tarif mingguan berhasil disimpan!", "success");
+                showCustomToast("Tarif sewa meja harian berhasil disimpan!", "success");
             }
+
+            saveCloudSettings();
+            updateHeaderRateDisplay();
+        }
+
+        function toggleGoogleReviewDiscountSetting() {
+            const chk = document.getElementById('setting-google-discount-enabled');
+            state.settings.googleReviewDiscountEnabled = !!chk?.checked;
+            saveCloudSettings();
+            showCustomToast("Pengaturan Diskon Ulasan Google diperbarui.", "info");
+        }
+
+        function toggleBookingFeeSetting() {
+            const chk = document.getElementById('setting-booking-fee-enabled');
+            state.settings.bookingFeeEnabled = !!chk?.checked;
+            saveCloudSettings();
+            showCustomToast("Pengaturan Modul Booking Fee diperbarui.", "info");
+        }
+
+        function handleAddProduct(e) {
+            e.preventDefault();
+            const name = document.getElementById('new-product-name')?.value.trim();
+            const price = parseFloat(document.getElementById('new-product-price')?.value) || 0;
+
+            if (!name || price <= 0) return;
+
+            const newProd = {
+                id: "P-" + Math.floor(1000 + Math.random() * 9000),
+                name: name,
+                price: price
+            };
+
+            state.products.push(newProd);
+            saveCloudSettings();
+            renderProductsTable();
+
+            if (document.getElementById('new-product-name')) document.getElementById('new-product-name').value = '';
+            if (document.getElementById('new-product-price')) document.getElementById('new-product-price').value = '';
+            showCustomToast(`Menu F&B "${name}" berhasil ditambahkan!`, "success");
+        }
+
+        function deleteProduct(prodId) {
+            state.products = state.products.filter(p => p.id !== prodId);
+            saveCloudSettings();
+            renderProductsTable();
+            showCustomToast("Menu F&B telah dihapus.", "info");
+        }
+
+        function renderProductsTable() {
+            const tbody = document.getElementById('products-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            state.products.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-slate-800">${p.name}</td>
+                    <td class="p-2.5 text-right font-mono font-bold text-emerald-700">${formatIDR(p.price)}</td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteProduct('${p.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function handleAddDiscountRule(e) {
+            e.preventDefault();
+            const minHours = parseFloat(document.getElementById('rule-min-hours')?.value) || 0;
+            const type = document.getElementById('rule-type')?.value;
+            const value = parseFloat(document.getElementById('rule-value')?.value) || 0;
+            const days = document.getElementById('rule-days')?.value;
+
+            if (minHours <= 0 || value <= 0) return;
+
+            const newRule = {
+                id: "R-" + Math.floor(1000 + Math.random() * 9000),
+                minHours: minHours,
+                type: type,
+                value: value,
+                days: days,
+                enabled: true
+            };
+
+            state.discountRules.push(newRule);
+            saveCloudSettings();
+            renderDiscountRulesTable();
+
+            if (document.getElementById('rule-min-hours')) document.getElementById('rule-min-hours').value = '';
+            if (document.getElementById('rule-value')) document.getElementById('rule-value').value = '';
+            showCustomToast("Aturan diskon otomatis berhasil ditambahkan!", "success");
+        }
+
+        function deleteDiscountRule(ruleId) {
+            state.discountRules = state.discountRules.filter(r => r.id !== ruleId);
+            saveCloudSettings();
+            renderDiscountRulesTable();
+            showCustomToast("Aturan diskon berhasil dihapus.", "info");
+        }
+
+        function renderDiscountRulesTable() {
+            const tbody = document.getElementById('discount-rules-table-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            state.discountRules.forEach(r => {
+                const valText = r.type === 'PERCENT' ? `${r.value}%` : formatIDR(r.value);
+                const dayText = r.days === 'ALL' ? 'Setiap Hari' : r.days === 'WEEKDAY' ? 'Weekday' : 'Weekend';
+
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-slate-100 hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-slate-800">≥ ${r.minHours} Jam</td>
+                    <td class="p-2.5 font-semibold text-slate-600">${dayText}</td>
+                    <td class="p-2.5 text-right font-mono font-bold text-amber-700">${valText}</td>
+                    <td class="p-2.5 text-center">
+                        <button onclick="deleteDiscountRule('${r.id}')" class="text-rose-500 hover:text-rose-700 font-bold px-2 py-1"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
         function showCustomToast(msg, type = 'info') {
@@ -1797,7 +1794,7 @@
         }
 
         window.onload = function() {
-            initStore();
+            initFirebase();
             setupDates();
             renderTimeline();
         };
