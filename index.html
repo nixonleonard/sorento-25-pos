@@ -59,7 +59,6 @@
 </head>
 <body class="h-full flex flex-col bg-slate-100 text-slate-800 overflow-hidden select-none">
 
-    <!-- Navigation Header -->
     <header class="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between shadow-sm shrink-0">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-emerald-500/20">
@@ -637,12 +636,6 @@
     </div>
 
     <script>
-
-        // =========================================================================
-        // KONFIGURASI FIREBASE CLOUD DATABASE
-        // Silakan ganti objek firebaseConfig di bawah ini dengan config dari Firebase Console Anda
-        // =========================================================================
-  // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyAYUwB6v9vjRf4bOHqR1zF8KRykAa1j84U",
             authDomain: "pos-8-mahjong-db.firebaseapp.com",
@@ -683,7 +676,6 @@
         let db = null;
         let auth = null;
 
-        // Inisialisasi Firebase & Fallback Offline
         function initFirebase() {
             try {
                 if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
@@ -729,7 +721,6 @@
         function subscribeCloudData() {
             if (!db) return;
 
-            // Dapatkan Data Booking
             db.collection("bookings").onSnapshot(snapshot => {
                 state.bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderTimeline();
@@ -738,7 +729,6 @@
                 console.error("Gagal mendengarkan data booking cloud:", err);
             });
 
-            // Dapatkan Data Pengaturan & F&B
             db.collection("settings").doc("config").onSnapshot(doc => {
                 if (doc.exists) {
                     const data = doc.data();
@@ -811,7 +801,6 @@
             localStorage.setItem('mj_discount_rules_v7', JSON.stringify(state.discountRules));
             localStorage.setItem('mj_app_settings_v7', JSON.stringify(state.settings));
         }
-
 
         function formatIDR(amount) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(amount || 0);
@@ -1058,7 +1047,6 @@
             if (!select) return;
             select.innerHTML = '';
             
-            // Minimal 1 Jam (4 slot @ 15m), increment 30 menit (2 slot)
             for (let slots = 4; slots <= 32; slots += 2) {
                 const hrs = slots * 0.25;
                 const opt = document.createElement('option');
@@ -1103,6 +1091,10 @@
 
         function handleCreateBooking(e) {
             e.preventDefault();
+            if (!state.isCloudOnline) {
+                fallbackToLocalStorage();
+                return;
+            }
             const name = document.getElementById('form-name').value.trim();
             const phone = document.getElementById('form-phone').value.trim();
             const table = parseInt(document.getElementById('form-table').value);
@@ -1179,11 +1171,9 @@
             if (document.getElementById('modal-manage-duration')) document.getElementById('modal-manage-duration').innerText = `${durationHrs} Jam @ ${formatIDR(booking.hourlyRate)}/jam`;
             if (document.getElementById('modal-manage-base-price')) document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.tableFee);
 
-            // Tampilkan Pilihan F&B
             populateFBPicker();
             renderCurrentFBList();
 
-            // Sediakan Opsi Diskon
             const googleBox = document.getElementById('container-google-discount');
             if (googleBox) {
                 if (state.settings.googleReviewDiscountEnabled) {
@@ -1305,14 +1295,12 @@
             const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const subtotal = tableFee + fbFee;
 
-            // Diskon Ulasan Google (5%)
             let googleDiscountAmt = 0;
             const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
             if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
                 googleDiscountAmt = Math.round(subtotal * 0.05);
             }
 
-            // Diskon Durasi Otomatis
             let autoDiscountAmt = 0;
             let autoDiscountLabel = "Tidak ada";
             const durationHrs = booking.durationSlots * 0.25;
@@ -1357,7 +1345,10 @@
         }
 
         function confirmBookingPayment() {
-            if (!state.activeBookingId) return;
+            if (!state.activeBookingId || !state.isCloudOnline) {
+                if (!state.isCloudOnline) fallbackToLocalStorage();
+                return;
+            }
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (!booking) return;
 
@@ -1424,6 +1415,10 @@
 
         function executeBookingCancellation(e) {
             e.preventDefault();
+            if (!state.isCloudOnline) {
+                fallbackToLocalStorage();
+                return;
+            }
             const inputPin = document.getElementById('cancel-pin-input')?.value;
 
             if (inputPin !== state.ownerPin) {
@@ -1440,7 +1435,7 @@
 
             if (booking) {
                 booking.status = "CANCELLED";
-                booking.finalTotal = 0; // Pemesanan dibatalkan bernilai Rp 0
+                booking.finalTotal = 0;
                 booking.completedOrCancelledTime = new Date().toISOString();
 
                 saveCloudBooking(booking);
@@ -1455,7 +1450,6 @@
         function handlePrintReceipt() {
             showCustomToast("Fungsi Cetak Struk siap digunakan untuk integrasi printer.", "info");
         }
-
 
         function renderTransactions() {
             const startDate = document.getElementById('trans-start-date')?.value || state.selectedDate;
@@ -1495,7 +1489,6 @@
                     const startStr = slotIndexToTime(b.startSlot);
                     const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
 
-                    // Rincian Detail F&B
                     let fbDetailsText = '-';
                     if (b.items && b.items.length > 0) {
                         fbDetailsText = b.items.map(i => `${i.name} (x${i.qty} @ ${formatIDR(i.price)} = ${formatIDR(i.price * i.qty)})`).join('<br>');
@@ -1583,7 +1576,6 @@
             XLSX.writeFile(workbook, fileName);
             showCustomToast(`Berhasil mengekspor ${filteredBookings.length} data transaksi!`, "success");
         }
-
 
         function updateSettingsUI() {
             if (state.settingsUnlocked) {
@@ -1801,3 +1793,4 @@
     </script>
 </body>
 </html>
+```eor
