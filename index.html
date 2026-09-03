@@ -408,11 +408,11 @@
                         <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800 mb-3">5. Aturan Diskon Otomatis Durasi Main</h3>
                         <form onsubmit="handleAddDiscountRule(event)" class="grid grid-cols-4 gap-2 mb-4">
                             <input type="number" id="rule-min-hours" placeholder="Min. Jam (contoh: 3)" required step="0.5" class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-semibold">
-                            <select id="rule-type" class="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold">
+                            <select id="rule-type" onchange="handleRuleTypeChange(this.value)" class="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold">
                                 <option value="PERCENT">Persen (%)</option>
                                 <option value="FIXED">Nominal (Rp)</option>
                             </select>
-                            <input type="number" id="rule-value" placeholder="Nilai Diskon" required step="500" class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold">
+                            <input type="number" id="rule-value" placeholder="Nilai (1 - 100%)" min="1" max="100" step="1" required class="bg-slate-50 border border-slate-300 rounded-xl px-2.5 py-2 text-xs font-bold">
                             <select id="rule-days" class="bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-xs font-semibold">
                                 <option value="ALL">Setiap Hari</option>
                                 <option value="WEEKDAY">Weekday</option>
@@ -497,6 +497,17 @@
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Catatan Tambahan (Opsional)</label>
                     <input type="text" id="form-notes" placeholder="Contoh: Minta meja dekat kipas" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-emerald-500 transition">
+                </div>
+
+                <!-- Opsi Booking Fee / DP jika diaktifkan di Pengaturan Pemilik -->
+                <div id="form-container-booking-fee" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <span class="font-bold text-xs text-slate-800 block">Bayar Booking Fee / DP</span>
+                        <span class="text-[11px] text-amber-700 font-semibold">Potongan Rp 50.000 saat pelunasan</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="form-booking-fee" onchange="calculateFormPrice()" class="w-4 h-4 text-emerald-600 rounded">
+                    </label>
                 </div>
 
                 <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between mt-1">
@@ -596,9 +607,22 @@
                         <span>Total F&B / Tambahan:</span>
                         <span id="summary-fb-fee" class="font-bold text-slate-800">Rp 0</span>
                     </div>
-                    <div class="flex justify-between text-amber-700 font-medium">
+                    <!-- Rincian Spesifik Diskon -->
+                    <div id="row-discount-google" class="flex justify-between text-amber-700 font-medium hidden">
+                        <span>• Diskon Ulasan Google (5%):</span>
+                        <span id="summary-google-discount" class="font-bold">- Rp 0</span>
+                    </div>
+                    <div id="row-discount-auto" class="flex justify-between text-amber-700 font-medium hidden">
+                        <span id="label-summary-auto-discount">• Diskon Durasi Main:</span>
+                        <span id="summary-auto-discount" class="font-bold">- Rp 0</span>
+                    </div>
+                    <div class="flex justify-between text-amber-800 font-bold border-t border-amber-200/60 pt-1">
                         <span>Total Diskon:</span>
                         <span id="summary-discount-fee" class="font-bold">- Rp 0</span>
+                    </div>
+                    <div id="row-booking-fee" class="flex justify-between text-emerald-800 font-medium hidden">
+                        <span>Booking Fee (DP Terbayar):</span>
+                        <span id="summary-booking-fee" class="font-bold">- Rp 0</span>
                     </div>
                     <div class="flex justify-between items-center border-t border-emerald-200 pt-2.5 mt-1">
                         <span class="font-extrabold text-slate-900 uppercase">Total Akhir Bayar:</span>
@@ -1108,6 +1132,19 @@
         function openBookingModal() {
             populateStartTimes();
             populateDurationOptions();
+            
+            // Tampilkan pilihan DP jika fitur Booking Fee diaktifkan di Pengaturan Pemilik
+            const bfContainer = document.getElementById('form-container-booking-fee');
+            const bfInput = document.getElementById('form-booking-fee');
+            if (bfContainer && bfInput) {
+                if (state.settings.bookingFeeEnabled) {
+                    bfContainer.classList.remove('hidden');
+                } else {
+                    bfContainer.classList.add('hidden');
+                }
+                bfInput.checked = false;
+            }
+
             calculateFormPrice();
             document.getElementById('modal-create-booking')?.classList.remove('hidden');
         }
@@ -1117,6 +1154,18 @@
             populateStartTimes();
             populateDurationOptions();
             if (document.getElementById('form-start-slot')) document.getElementById('form-start-slot').value = startSlot;
+            
+            const bfContainer = document.getElementById('form-container-booking-fee');
+            const bfInput = document.getElementById('form-booking-fee');
+            if (bfContainer && bfInput) {
+                if (state.settings.bookingFeeEnabled) {
+                    bfContainer.classList.remove('hidden');
+                } else {
+                    bfContainer.classList.add('hidden');
+                }
+                bfInput.checked = false;
+            }
+
             calculateFormPrice();
             document.getElementById('modal-create-booking')?.classList.remove('hidden');
         }
@@ -1220,6 +1269,10 @@
             const dayRate = getHourlyRateForDate(state.selectedDate);
             const tableFee = hours * dayRate;
 
+            const isBfChecked = state.settings.bookingFeeEnabled && document.getElementById('form-booking-fee')?.checked;
+            const bookingFee = isBfChecked ? 50000 : 0;
+            const finalTotal = Math.max(0, tableFee - bookingFee);
+
             const newBooking = {
                 id: "BK-" + Math.floor(1000 + Math.random() * 9000),
                 date: state.selectedDate,
@@ -1230,10 +1283,11 @@
                 durationSlots: durationSlots,
                 hourlyRate: dayRate,
                 tableFee: tableFee,
+                bookingFee: bookingFee,
                 items: [],
                 googleReviewDiscount: false,
                 autoDiscountAmount: 0,
-                finalTotal: tableFee,
+                finalTotal: finalTotal,
                 status: "BOOKED",
                 notes: notes,
                 createdTime: new Date().toISOString(),
@@ -1270,18 +1324,35 @@
             if (document.getElementById('modal-manage-duration')) document.getElementById('modal-manage-duration').innerText = `${durationHrs} Jam @ ${formatIDR(booking.hourlyRate)}/jam`;
             if (document.getElementById('modal-manage-base-price')) document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.tableFee);
 
+            // Tampilkan Pilihan F&B
             populateFBPicker();
             renderCurrentFBList();
 
+            // Sediakan Opsi Diskon
             const googleBox = document.getElementById('container-google-discount');
+            const chkGoogle = document.getElementById('modal-chk-google-discount');
             if (googleBox) {
                 if (state.settings.googleReviewDiscountEnabled) {
                     googleBox.classList.remove('hidden');
-                    const chk = document.getElementById('modal-chk-google-discount');
-                    if (chk) chk.checked = !!booking.googleReviewDiscount;
+                    if (chkGoogle) {
+                        chkGoogle.checked = !!booking.googleReviewDiscount;
+                    }
                 } else {
                     googleBox.classList.add('hidden');
                 }
+            }
+
+            const isLocked = booking.status === 'COMPLETED' || booking.status === 'PAID';
+
+            // Kunci permanen diskon jika pesanan sudah selesai dibayar
+            if (chkGoogle) {
+                chkGoogle.disabled = isLocked;
+            }
+            const discountSec = document.getElementById('section-discount-selection');
+            if (isLocked) {
+                discountSec?.classList.add('opacity-75', 'pointer-events-none');
+            } else {
+                discountSec?.classList.remove('opacity-75', 'pointer-events-none');
             }
 
             recalculateManageSummary();
@@ -1290,8 +1361,6 @@
             const actionsDiv = document.getElementById('modal-manage-actions');
             const lockedMsg = document.getElementById('modal-manage-locked-msg');
             const fbSection = document.getElementById('section-fb-selection');
-
-            const isLocked = booking.status === 'COMPLETED' || booking.status === 'PAID';
 
             if (statusBadge) {
                 statusBadge.className = isLocked 
@@ -1328,7 +1397,7 @@
         function addSelectedFBItem() {
             const picker = document.getElementById('modal-fb-picker');
             const qtyInput = document.getElementById('modal-fb-qty');
-            if (!picker || !qtyInput) return;
+            if (!picker || !qtyInput || !state.activeBookingId) return;
 
             const prodId = picker.value;
             const qty = parseInt(qtyInput.value) || 1;
@@ -1347,14 +1416,31 @@
                 });
             }
 
+            // AUTO-SAVE F&B: Langsung simpan ke cloud/lokal
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (booking) {
+                booking.items = [...state.currentFBItems];
+                saveCloudBooking(booking);
+            }
+
             renderCurrentFBList();
             recalculateManageSummary();
+            showCustomToast(`Menu "${prod.name}" tersimpan di pesanan meja.`, "success");
         }
 
         function removeFBItem(index) {
             state.currentFBItems.splice(index, 1);
+
+            // AUTO-SAVE F&B: Langsung simpan perubahan
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (booking) {
+                booking.items = [...state.currentFBItems];
+                saveCloudBooking(booking);
+            }
+
             renderCurrentFBList();
             recalculateManageSummary();
+            showCustomToast("Item F&B dihapus dari pesanan.", "info");
         }
 
         function renderCurrentFBList() {
@@ -1394,6 +1480,104 @@
             const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const subtotal = tableFee + fbFee;
 
+            // Diskon Ulasan Google (5%)
+            let googleDiscountAmt = 0;
+            const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
+            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
+            }
+
+            // Diskon Durasi Otomatis
+            let autoDiscountAmt = 0;
+            let autoDiscountLabel = "Tidak ada";
+            const durationHrs = booking.durationSlots * 0.25;
+            const dayKey = getDayKey(booking.date);
+            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+
+            const matchedRule = state.discountRules
+                .filter(r => r.enabled && durationHrs >= r.minHours)
+                .filter(r => {
+                    if (r.days === 'ALL') return true;
+                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
+                    if (r.days === 'WEEKEND' && isWeekend) return true;
+                    return false;
+                })
+                .sort((a, b) => b.minHours - a.minHours)[0];
+
+            if (matchedRule) {
+                if (matchedRule.type === 'PERCENT') {
+                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
+                    autoDiscountLabel = `${matchedRule.value}% (Durasi ≥ ${matchedRule.minHours} jam)`;
+                } else {
+                    autoDiscountAmt = matchedRule.value;
+                    autoDiscountLabel = `${formatIDR(matchedRule.value)} (Durasi ≥ ${matchedRule.minHours} jam)`;
+                }
+            }
+
+            if (document.getElementById('value-auto-discount-rule')) {
+                document.getElementById('value-auto-discount-rule').innerText = autoDiscountLabel;
+            }
+
+            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
+            const bookingFee = booking.bookingFee || 0;
+            const finalTotal = Math.max(0, subtotal - totalDiscount - bookingFee);
+
+            if (document.getElementById('summary-table-fee')) document.getElementById('summary-table-fee').innerText = formatIDR(tableFee);
+            if (document.getElementById('summary-fb-fee')) document.getElementById('summary-fb-fee').innerText = formatIDR(fbFee);
+            
+            // Tampilkan rincian masing-masing diskon
+            const rowGoogle = document.getElementById('row-discount-google');
+            if (rowGoogle) {
+                if (googleDiscountAmt > 0) {
+                    rowGoogle.classList.remove('hidden');
+                    document.getElementById('summary-google-discount').innerText = `- ${formatIDR(googleDiscountAmt)}`;
+                } else {
+                    rowGoogle.classList.add('hidden');
+                }
+            }
+
+            const rowAuto = document.getElementById('row-discount-auto');
+            if (rowAuto) {
+                if (autoDiscountAmt > 0) {
+                    rowAuto.classList.remove('hidden');
+                    document.getElementById('label-summary-auto-discount').innerText = `• Diskon Durasi (${autoDiscountLabel}):`;
+                    document.getElementById('summary-auto-discount').innerText = `- ${formatIDR(autoDiscountAmt)}`;
+                } else {
+                    rowAuto.classList.add('hidden');
+                }
+            }
+
+            if (document.getElementById('summary-discount-fee')) document.getElementById('summary-discount-fee').innerText = `- ${formatIDR(totalDiscount)}`;
+            
+            const rowBf = document.getElementById('row-booking-fee');
+            if (rowBf) {
+                if (bookingFee > 0) {
+                    rowBf.classList.remove('hidden');
+                    document.getElementById('summary-booking-fee').innerText = `- ${formatIDR(bookingFee)}`;
+                } else {
+                    rowBf.classList.add('hidden');
+                }
+            }
+
+            if (document.getElementById('summary-final-total')) document.getElementById('summary-final-total').innerText = formatIDR(finalTotal);
+        }
+
+        function closeManageModal() {
+            document.getElementById('modal-manage-booking')?.classList.add('hidden');
+        }
+
+        function confirmBookingPayment() {
+            if (!state.activeBookingId || !state.isCloudOnline) {
+                if (!state.isCloudOnline) fallbackToLocalStorage();
+                return;
+            }
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            const tableFee = booking.tableFee || 0;
+            const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const subtotal = tableFee + fbFee;
+
             let googleDiscountAmt = 0;
             const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
             if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
@@ -1426,71 +1610,17 @@
                 }
             }
 
-            if (document.getElementById('value-auto-discount-rule')) {
-                document.getElementById('value-auto-discount-rule').innerText = autoDiscountLabel;
-            }
-
             const totalDiscount = googleDiscountAmt + autoDiscountAmt;
-            const finalTotal = Math.max(0, subtotal - totalDiscount);
-
-            if (document.getElementById('summary-table-fee')) document.getElementById('summary-table-fee').innerText = formatIDR(tableFee);
-            if (document.getElementById('summary-fb-fee')) document.getElementById('summary-fb-fee').innerText = formatIDR(fbFee);
-            if (document.getElementById('summary-discount-fee')) document.getElementById('summary-discount-fee').innerText = `- ${formatIDR(totalDiscount)}`;
-            if (document.getElementById('summary-final-total')) document.getElementById('summary-final-total').innerText = formatIDR(finalTotal);
-        }
-
-        function closeManageModal() {
-            document.getElementById('modal-manage-booking')?.classList.add('hidden');
-        }
-
-        function confirmBookingPayment() {
-            if (!state.activeBookingId || !state.isCloudOnline) {
-                if (!state.isCloudOnline) fallbackToLocalStorage();
-                return;
-            }
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking) return;
-
-            const tableFee = booking.tableFee || 0;
-            const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const subtotal = tableFee + fbFee;
-
-            let googleDiscountAmt = 0;
-            const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
-            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
-                googleDiscountAmt = Math.round(subtotal * 0.05);
-            }
-
-            let autoDiscountAmt = 0;
-            const durationHrs = booking.durationSlots * 0.25;
-            const dayKey = getDayKey(booking.date);
-            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
-
-            const matchedRule = state.discountRules
-                .filter(r => r.enabled && durationHrs >= r.minHours)
-                .filter(r => {
-                    if (r.days === 'ALL') return true;
-                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
-                    if (r.days === 'WEEKEND' && isWeekend) return true;
-                    return false;
-                })
-                .sort((a, b) => b.minHours - a.minHours)[0];
-
-            if (matchedRule) {
-                if (matchedRule.type === 'PERCENT') {
-                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
-                } else {
-                    autoDiscountAmt = matchedRule.value;
-                }
-            }
-
-            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
-            const finalTotal = Math.max(0, subtotal - totalDiscount);
+            const bookingFee = booking.bookingFee || 0;
+            const finalTotal = Math.max(0, subtotal - totalDiscount - bookingFee);
 
             booking.items = [...state.currentFBItems];
             booking.googleReviewDiscount = !!isGoogleChecked;
+            booking.googleDiscountAmount = googleDiscountAmt;
             booking.autoDiscountAmount = autoDiscountAmt;
+            booking.autoDiscountLabel = autoDiscountLabel;
             booking.totalDiscount = totalDiscount;
+            booking.bookingFee = bookingFee;
             booking.finalTotal = finalTotal;
             booking.status = "COMPLETED";
             booking.completedOrCancelledTime = new Date().toISOString();
@@ -1594,7 +1724,23 @@
                     }
 
                     const formattedTableFee = formatIDR(b.tableFee || b.basePrice || 0);
-                    const formattedDiscount = b.totalDiscount ? `- ${formatIDR(b.totalDiscount)}` : '-';
+                    
+                    let discountParts = [];
+                    if (b.googleReviewDiscount) {
+                        const gAmt = b.googleDiscountAmount || Math.round(((b.tableFee || 0) + (b.items ? b.items.reduce((s, i) => s + (i.price * i.qty), 0) : 0)) * 0.05);
+                        discountParts.push(`<span class="text-amber-800 font-semibold">• Ulasan Google: -${formatIDR(gAmt)}</span>`);
+                    }
+                    if (b.autoDiscountAmount > 0) {
+                        discountParts.push(`<span class="text-amber-800 font-semibold">• Durasi Main: -${formatIDR(b.autoDiscountAmount)}</span>`);
+                    }
+                    if (b.totalDiscount > 0) {
+                        discountParts.push(`<strong class="text-amber-900 border-t border-amber-200 block mt-0.5 pt-0.5">Total Diskon: -${formatIDR(b.totalDiscount)}</strong>`);
+                    }
+                    if (b.bookingFee > 0) {
+                        discountParts.push(`<span class="text-emerald-700 font-bold">• DP Meja: -${formatIDR(b.bookingFee)}</span>`);
+                    }
+                    const formattedDiscount = discountParts.length > 0 ? discountParts.join('<br>') : '-';
+
                     const formattedFinalTotal = isCancelled ? `<span class="line-through text-slate-400">Rp 0</span>` : formatIDR(b.finalTotal || b.totalPrice || 0);
 
                     const tr = document.createElement('tr');
@@ -1649,6 +1795,19 @@
                     ? b.items.map(i => `${i.name} x${i.qty} (@${i.price})`).join("; ") 
                     : "Tidak ada";
 
+                let discountExcelParts = [];
+                if (b.googleReviewDiscount) {
+                    const gAmt = b.googleDiscountAmount || Math.round(((b.tableFee || 0) + (b.items ? b.items.reduce((s, i) => s + (i.price * i.qty), 0) : 0)) * 0.05);
+                    discountExcelParts.push(`Ulasan Google (-${formatIDR(gAmt)})`);
+                }
+                if (b.autoDiscountAmount > 0) {
+                    discountExcelParts.push(`Diskon Durasi (-${formatIDR(b.autoDiscountAmount)})`);
+                }
+                if (b.bookingFee > 0) {
+                    discountExcelParts.push(`DP Meja (-${formatIDR(b.bookingFee)})`);
+                }
+                const detailDiskonExcel = discountExcelParts.length > 0 ? discountExcelParts.join("; ") : "Tidak ada";
+
                 return {
                     "ID Booking": b.id,
                     "Nama Pelanggan": b.name,
@@ -1659,8 +1818,10 @@
                     "Waktu Selesai / Batal": formatDateTime(b.completedOrCancelledTime),
                     "Durasi (Jam)": b.durationSlots * 0.25,
                     "Biaya Meja (IDR)": b.tableFee || b.basePrice || 0,
+                    "Booking Fee / DP (IDR)": b.bookingFee || 0,
                     "Rincian F&B / Tambahan": fbText,
-                    "Diskon (IDR)": b.totalDiscount || 0,
+                    "Rincian Diskon & DP": detailDiskonExcel,
+                    "Total Diskon (IDR)": b.totalDiscount || 0,
                     "Total Bayar (IDR)": b.status === "CANCELLED" ? 0 : (b.finalTotal || b.totalPrice || 0),
                     "Status Transaksi": b.status,
                     "Catatan": b.notes || ""
@@ -1813,6 +1974,23 @@
             showCustomToast("Menu F&B telah dihapus.", "info");
         }
 
+        function handleRuleTypeChange(type) {
+            const valInput = document.getElementById('rule-value');
+            if (!valInput) return;
+            if (type === 'PERCENT') {
+                valInput.min = "1";
+                valInput.max = "100";
+                valInput.step = "1";
+                valInput.placeholder = "Nilai (1 - 100%)";
+                if (parseFloat(valInput.value) > 100) valInput.value = "100";
+            } else {
+                valInput.min = "0";
+                valInput.max = "100000";
+                valInput.step = "1000";
+                valInput.placeholder = "Nominal (0 - 100.000)";
+            }
+        }
+
         function renderProductsTable() {
             const tbody = document.getElementById('products-table-body');
             if (!tbody) return;
@@ -1839,7 +2017,22 @@
             const value = parseFloat(document.getElementById('rule-value')?.value) || 0;
             const days = document.getElementById('rule-days')?.value;
 
-            if (minHours <= 0 || value <= 0) return;
+            if (minHours <= 0) {
+                showCustomToast("Minimal durasi jam harus lebih dari 0.", "error");
+                return;
+            }
+
+            if (type === 'PERCENT') {
+                if (value < 1 || value > 100) {
+                    showCustomToast("Diskon persen harus berada di antara 1% hingga 100%.", "error");
+                    return;
+                }
+            } else if (type === 'FIXED') {
+                if (value < 0 || value > 100000) {
+                    showCustomToast("Diskon nominal harus berada di antara Rp 0 hingga Rp 100.000.", "error");
+                    return;
+                }
+            }
 
             const newRule = {
                 id: "R-" + Math.floor(1000 + Math.random() * 9000),
