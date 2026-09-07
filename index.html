@@ -1677,7 +1677,248 @@
         }
 
         function handlePrintReceipt() {
-            showCustomToast("Fungsi Cetak Struk siap digunakan untuk integrasi printer.", "info");
+            if (!state.activeBookingId) {
+                showCustomToast("Pilih data booking yang ingin dicetak.", "error");
+                return;
+            }
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) {
+                showCustomToast("Data booking tidak ditemukan.", "error");
+                return;
+            }
+
+            printThermalReceipt(booking);
+        }
+
+        function printThermalReceipt(booking) {
+            const receiptContent = generateReceiptHtml(booking);
+
+            let printFrame = document.getElementById('thermal-print-frame');
+            if (!printFrame) {
+                printFrame = document.createElement('iframe');
+                printFrame.id = 'thermal-print-frame';
+                printFrame.style.position = 'fixed';
+                printFrame.style.right = '0';
+                printFrame.style.bottom = '0';
+                printFrame.style.width = '0';
+                printFrame.style.height = '0';
+                printFrame.style.border = 'none';
+                document.body.appendChild(printFrame);
+            }
+
+            const frameDoc = printFrame.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(receiptContent);
+            frameDoc.close();
+
+            showCustomToast("Mengirim struk ke dialog printer...", "info");
+
+            setTimeout(() => {
+                try {
+                    printFrame.contentWindow.focus();
+                    printFrame.contentWindow.print();
+                } catch (err) {
+                    console.error("Gagal memanggil fungsi print:", err);
+                    showCustomToast("Gagal membuka jendela printer.", "error");
+                }
+            }, 350);
+        }
+
+        function generateReceiptHtml(booking) {
+            const startStr = slotIndexToTime(booking.startSlot);
+            const endStr = slotIndexToTime(booking.startSlot + booking.durationSlots);
+            const durationHrs = booking.durationSlots * 0.25;
+
+            const tableFee = booking.tableFee || (durationHrs * (booking.hourlyRate || 50000));
+            const items = booking.items || [];
+            const bookingFee = booking.bookingFee || 0;
+            const googleDiscount = booking.googleDiscountAmount || 0;
+            const autoDiscount = booking.autoDiscountAmount || 0;
+            const totalDiscount = booking.totalDiscount || (googleDiscount + autoDiscount);
+            const subtotal = tableFee + items.reduce((s, i) => s + (i.price * i.qty), 0);
+            const finalTotal = booking.finalTotal || Math.max(0, subtotal - totalDiscount - bookingFee);
+
+            let itemsHtml = '';
+            if (items.length > 0) {
+                itemsHtml = items.map(item => `
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2.5px;">
+                        <span style="font-weight: 600;">${item.name}</span>
+                        <span style="font-family: monospace; font-weight: 600;">${formatIDR(item.price * item.qty)}</span>
+                    </div>
+                    <div style="font-size: 9px; color: #6b7280; margin-bottom: 2px;">${item.qty} × ${formatIDR(item.price)}</div>
+                `).join('');
+            }
+
+            let discountHtml = '';
+            if (googleDiscount > 0) {
+                discountHtml += `
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #374151; margin-bottom: 2px;">
+                        <span>Diskon Ulasan Google (5%):</span>
+                        <span style="font-family: monospace;">-${formatIDR(googleDiscount)}</span>
+                    </div>
+                `;
+            }
+            if (autoDiscount > 0) {
+                discountHtml += `
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #374151; margin-bottom: 2px;">
+                        <span>Diskon Durasi Main:</span>
+                        <span style="font-family: monospace;">-${formatIDR(autoDiscount)}</span>
+                    </div>
+                `;
+            }
+            if (bookingFee > 0) {
+                discountHtml += `
+                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #374151; margin-bottom: 2px;">
+                        <span>Booking Fee (DP):</span>
+                        <span style="font-family: monospace;">-${formatIDR(bookingFee)}</span>
+                    </div>
+                `;
+            }
+
+            return `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Struk Pembayaran #${booking.id} - 8 Bamboo</title>
+                    <style>
+                        @page {
+                            margin: 0;
+                            size: 80mm auto;
+                        }
+                        @media print {
+                            body {
+                                margin: 0;
+                                padding: 6px 8px;
+                            }
+                        }
+                        * { box-sizing: border-box; margin: 0; padding: 0; }
+                        body {
+                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                            width: 74mm;
+                            margin: 0 auto;
+                            padding: 10px 8px;
+                            color: #111827;
+                            font-size: 11px;
+                            line-height: 1.35;
+                            background: #fff;
+                        }
+                        .text-center { text-align: center; }
+                        .text-right { text-align: right; }
+                        .font-bold { font-weight: 700; }
+                        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+                        .title { font-size: 16px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px; }
+                        .address { font-size: 8.5px; color: #4b5563; line-height: 1.3; margin-bottom: 2px; }
+                        .hours { font-size: 8.5px; color: #6b7280; margin-bottom: 4px; }
+                        .divider-thin { border-top: 1px solid #d1d5db; margin: 6px 0; }
+                        .divider-thick { border-top: 2px solid #111827; margin: 6px 0 5px 0; }
+                        .line-item { display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 10px; }
+                        .total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 3px; }
+                        .badge-paid {
+                            display: inline-block;
+                            border: 1px solid #111827;
+                            padding: 2px 10px;
+                            font-weight: 800;
+                            font-size: 9.5px;
+                            letter-spacing: 1.2px;
+                            text-transform: uppercase;
+                            margin-top: 5px;
+                        }
+                        .footer-note {
+                            font-size: 8.5px;
+                            text-align: center;
+                            margin-top: 8px;
+                            padding-top: 5px;
+                            border-top: 1px dashed #e5e7eb;
+                            color: #4b5563;
+                            line-height: 1.35;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="text-center">
+                        <div class="title">🀄 8 BAMBOO 🀄</div>
+                        <div class="address">
+                            Ruko South Sorrento No.25, Cihuni, Kec. Pagedangan,<br>
+                            Kabupaten Tangerang, Banten 15332
+                        </div>
+                        <div class="hours">Jam Operasional: 10:00 - 02:00 WIB</div>
+                    </div>
+
+                    <div class="divider-thin"></div>
+
+                    <div class="line-item">
+                        <span style="color: #4b5563;">No. Struk:</span>
+                        <span class="font-bold font-mono">#${booking.id}</span>
+                    </div>
+                    <div class="line-item">
+                        <span style="color: #4b5563;">Waktu Bayar:</span>
+                        <span>${formatDateTime(booking.completedOrCancelledTime || new Date().toISOString())}</span>
+                    </div>
+                    <div class="line-item">
+                        <span style="color: #4b5563;">Pelanggan:</span>
+                        <span class="font-bold">${booking.name}</span>
+                    </div>
+                    <div class="line-item">
+                        <span style="color: #4b5563;">No. Handphone:</span>
+                        <span class="font-mono">${booking.phone}</span>
+                    </div>
+                    <div class="line-item">
+                        <span style="color: #4b5563;">Meja:</span>
+                        <span class="font-bold">MEJA ${booking.table}</span>
+                    </div>
+                    <div class="line-item">
+                        <span style="color: #4b5563;">Jadwal Main:</span>
+                        <span>${booking.date} (${startStr} - ${endStr})</span>
+                    </div>
+                    <div class="line-item">
+                        <span style="color: #4b5563;">Durasi:</span>
+                        <span class="font-bold">${durationHrs} Jam</span>
+                    </div>
+
+                    <div class="divider-thin"></div>
+
+                    <div style="font-size: 9.5px; font-weight: 700; color: #6b7280; text-transform: uppercase; margin-bottom: 3px;">Rincian Item</div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+                        <span style="font-weight: 600;">Sewa Meja ${booking.table} (${durationHrs} Jam)</span>
+                        <span class="font-mono" style="font-weight: 600;">${formatIDR(tableFee)}</span>
+                    </div>
+                    <div style="font-size: 9px; color: #6b7280; margin-bottom: 2px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/jam</div>
+
+                    ${itemsHtml ? `
+                        <div style="margin-top: 3px;">
+                            ${itemsHtml}
+                        </div>
+                    ` : ''}
+
+                    <div class="divider-thin"></div>
+
+                    <div class="line-item" style="color: #4b5563;">
+                        <span>Subtotal:</span>
+                        <span class="font-mono">${formatIDR(subtotal)}</span>
+                    </div>
+
+                    ${discountHtml}
+
+                    <div class="divider-thick"></div>
+
+                    <div class="total-row">
+                        <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase;">TOTAL AKHIR:</span>
+                        <span class="font-mono" style="font-size: 14px; font-weight: 900;">${formatIDR(finalTotal)}</span>
+                    </div>
+
+                    <div class="text-center">
+                        <span class="badge-paid">LUNAS / PAID</span>
+                    </div>
+
+                    <div class="footer-note">
+                        Terima kasih atas kunjungan Anda di 8 Bamboo!<br>
+                        Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄
+                    </div>
+                </body>
+                </html>
+            `;
         }
 
         function renderTransactions() {
