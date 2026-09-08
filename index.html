@@ -72,23 +72,28 @@
             </div>
         </div>
 
-        <nav class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-sm font-semibold">
-            <button id="nav-book" onclick="switchPage('book')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm">
+        <nav class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold overflow-x-auto">
+            <button id="nav-book" onclick="switchPage('book')" class="px-3.5 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm shrink-0">
                 <i class="fa-solid fa-calendar-days"></i>
-                <span>Jadwal Meja (10:00 - 02:00)</span>
+                <span>Jadwal Meja</span>
             </button>
-            <button id="nav-trans" onclick="switchPage('trans')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+            <button id="nav-orders" onclick="switchPage('orders')" class="px-3.5 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900 relative shrink-0">
+                <i class="fa-solid fa-utensils"></i>
+                <span>Rekap Pesanan F&B</span>
+                <span id="nav-orders-badge" class="hidden ml-1 px-1.5 py-0.5 text-[10px] font-extrabold rounded-full bg-amber-500 text-white">0</span>
+            </button>
+            <button id="nav-trans" onclick="switchPage('trans')" class="px-3.5 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900 shrink-0">
                 <i class="fa-solid fa-receipt"></i>
                 <span>Riwayat Transaksi</span>
             </button>
-            <button id="nav-setting" onclick="switchPage('setting')" class="px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+            <button id="nav-setting" onclick="switchPage('setting')" class="px-3.5 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900 shrink-0">
                 <i class="fa-solid fa-shield-halved"></i>
                 <span>Pengaturan Pemilik</span>
             </button>
         </nav>
 
-        <div class="flex items-center gap-3">
-            <div class="hidden sm:flex flex-col text-right bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl">
+        <div class="flex items-center gap-2.5">
+            <div class="hidden lg:flex flex-col text-right bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold" id="current-day-label">Tarif Hari Ini</span>
                 <span class="text-sm font-extrabold text-emerald-600" id="current-rate-display">Rp 50.000 / jam</span>
             </div>
@@ -96,14 +101,14 @@
                 <i class="fa-solid fa-lock text-amber-600"></i>
                 <span class="hidden md:inline">Kunci Layar</span>
             </button>
-            <button onclick="openBookingModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-4 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20 text-sm">
-                <i class="fa-solid fa-plus text-base"></i>
-                <span>Tambah Booking</span>
+            <button onclick="openBookingModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20 text-xs sm:text-sm">
+                <i class="fa-solid fa-plus"></i>
+                <span>Booking Meja</span>
             </button>
         </div>
     </header>
 
-    <main class="flex-1 flex overflow-hidden">
+    <main class="flex-1 flex overflow-hidden relative">
 
         <!-- HALAMAN 1: JADWAL MEJA (TIMELINE) -->
         <div id="page-book" class="flex-1 flex w-full h-full overflow-hidden">
@@ -186,7 +191,62 @@
             </section>
         </div>
 
-        <!-- HALAMAN 2: RIWAYAT TRANSAKSI HARIAN -->
+        <!-- HALAMAN 2: REKAP PESANAN F&B (LIVE KITCHEN / BAR DISPLAY) -->
+        <div id="page-orders" class="flex-1 flex flex-col w-full h-full overflow-hidden bg-slate-50 hidden">
+            <div class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-sm">
+                <div>
+                    <h2 class="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                        <span>🍳</span> Rekap Pesanan F&B (Live Kitchen & Bar)
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Pantau dan kelola pesanan makanan & minuman dari semua meja secara langsung</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+                        <button onclick="setOrderFilter('ALL')" id="filter-btn-all" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm transition">Semua</button>
+                        <button onclick="setOrderFilter('PENDING')" id="filter-btn-pending" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5">
+                            <span>Menunggu</span>
+                            <span id="filter-pending-count" class="px-1.5 py-0.2 bg-amber-500 text-white text-[10px] rounded-full">0</span>
+                        </button>
+                        <button onclick="setOrderFilter('DELIVERED')" id="filter-btn-delivered" class="px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">Sudah Keluar</button>
+                    </div>
+                    <button onclick="renderOrdersPage()" class="p-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 border border-slate-200 transition" title="Refresh Pesanan">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ringkasan Cepat Dapur & Bar -->
+            <div class="p-6 pb-2 shrink-0">
+                <div class="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 rounded-2xl shadow-md flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-bell-concierge"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-300 block">Antrean Pesanan Menunggu Disajikan:</span>
+                            <span class="text-lg font-black text-white" id="orders-quick-summary-text">Memuat rekap pesanan...</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4 text-xs font-semibold">
+                        <div class="bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                            <span id="orders-pending-stat">0 Item Menunggu</span>
+                        </div>
+                        <div class="bg-white/10 px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                            <span id="orders-completed-stat">0 Item Selesai</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Grid Kartu Pesanan per Meja -->
+            <div class="flex-1 overflow-y-auto p-6 pt-3">
+                <div id="orders-table-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- HALAMAN 3: RIWAYAT TRANSAKSI HARIAN -->
         <div id="page-trans" class="flex-1 flex w-full h-full overflow-hidden hidden">
             <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0">
                 <div>
@@ -260,7 +320,7 @@
             </section>
         </div>
 
-        <!-- HALAMAN 3: PENGATURAN PEMILIK -->
+        <!-- HALAMAN 4: PENGATURAN PEMILIK -->
         <div id="page-setting" class="flex-1 flex w-full h-full overflow-y-auto bg-slate-50 p-6 hidden">
             <div class="max-w-3xl mx-auto w-full py-4">
                 <div id="setting-pin-lock" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl text-center max-w-md mx-auto my-12">
@@ -373,8 +433,8 @@
                         </div>
                         <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
                             <div>
-                                <span class="font-bold text-sm text-slate-800 block">Modul Booking Fee (Pengembangan Mendatang)</span>
-                                <span class="text-xs text-slate-500">Aktifkan struktur pendukung biaya pemesanan awal</span>
+                                <span class="font-bold text-sm text-slate-800 block">Modul Booking Fee (DP Rp 50.000)</span>
+                                <span class="text-xs text-slate-500">Aktifkan opsi pemesanan awal dengan uang muka (DP)</span>
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="setting-booking-fee-enabled" onchange="toggleBookingFeeSetting()" class="sr-only peer">
@@ -499,7 +559,7 @@
                     <input type="text" id="form-notes" placeholder="Contoh: Minta meja dekat kipas" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-emerald-500 transition">
                 </div>
 
-                <!-- Opsi Booking Fee / DP jika diaktifkan di Pengaturan Pemilik -->
+                <!-- Opsi Booking Fee / DP -->
                 <div id="form-container-booking-fee" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
                     <div>
                         <span class="font-bold text-xs text-slate-800 block">Bayar Booking Fee / DP</span>
@@ -607,7 +667,6 @@
                         <span>Total F&B / Tambahan:</span>
                         <span id="summary-fb-fee" class="font-bold text-slate-800">Rp 0</span>
                     </div>
-                    <!-- Rincian Spesifik Diskon -->
                     <div id="row-discount-google" class="flex justify-between text-amber-700 font-medium hidden">
                         <span>• Diskon Ulasan Google (5%):</span>
                         <span id="summary-google-discount" class="font-bold">- Rp 0</span>
@@ -646,7 +705,7 @@
                         <i class="fa-solid fa-lock"></i> Pembayaran Lunas. Pemesanan terkunci secara permanen.
                     </span>
                     <button onclick="handlePrintReceipt()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-print"></i> Cetak Struk Pembayaran
+                        <i class="fa-solid fa-print"></i> Cetak Struk Pembayaran (8 Bamboo)
                     </button>
                 </div>
             </div>
@@ -746,6 +805,7 @@
                 bookingFeeEnabled: false
             },
             currentFBItems: [],
+            ordersFilter: "ALL",
             isCloudOnline: false
         };
 
@@ -831,7 +891,7 @@
             state.isCloudOnline = false;
             updateSyncBadge(false);
             initLocalStore();
-            showOfflineLock(); // Wajibkan koneksi Cloud
+            showOfflineLock();
         }
 
         function subscribeCloudData() {
@@ -841,6 +901,8 @@
                 state.bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderTimeline();
                 renderTransactions();
+                renderOrdersPage();
+                updateOrderBadges();
             }, err => {
                 console.error("Gagal mendengarkan data booking cloud:", err);
                 fallbackToLocalStorage();
@@ -969,26 +1031,35 @@
 
         function switchPage(page) {
             document.getElementById('page-book')?.classList.add('hidden');
+            document.getElementById('page-orders')?.classList.add('hidden');
             document.getElementById('page-trans')?.classList.add('hidden');
             document.getElementById('page-setting')?.classList.add('hidden');
 
-            document.getElementById('nav-book').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
-            document.getElementById('nav-trans').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
-            document.getElementById('nav-setting').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900";
+            const inactiveClass = "px-3.5 py-2 rounded-lg flex items-center gap-2 transition-all text-slate-600 hover:text-slate-900 shrink-0";
+            const activeClass = "px-3.5 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm shrink-0";
+
+            document.getElementById('nav-book').className = inactiveClass;
+            document.getElementById('nav-orders').className = inactiveClass + " relative";
+            document.getElementById('nav-trans').className = inactiveClass;
+            document.getElementById('nav-setting').className = inactiveClass;
 
             if (page === 'book') {
                 document.getElementById('page-book')?.classList.remove('hidden');
-                document.getElementById('nav-book').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
+                document.getElementById('nav-book').className = activeClass;
                 renderTimeline();
+            } else if (page === 'orders') {
+                document.getElementById('page-orders')?.classList.remove('hidden');
+                document.getElementById('nav-orders').className = activeClass + " relative";
+                renderOrdersPage();
             } else if (page === 'trans') {
                 document.getElementById('page-trans')?.classList.remove('hidden');
-                document.getElementById('nav-trans').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
+                document.getElementById('nav-trans').className = activeClass;
                 document.getElementById('trans-start-date').value = state.selectedDate;
                 document.getElementById('trans-end-date').value = state.selectedDate;
                 renderTransactions();
             } else if (page === 'setting') {
                 document.getElementById('page-setting')?.classList.remove('hidden');
-                document.getElementById('nav-setting').className = "px-4 py-2 rounded-lg flex items-center gap-2 transition-all bg-emerald-600 text-white shadow-sm";
+                document.getElementById('nav-setting').className = activeClass;
                 updateSettingsUI();
             }
         }
@@ -1030,6 +1101,7 @@
             state.selectedDate = dateStr;
             updateHeaderRateDisplay();
             renderTimeline();
+            renderOrdersPage();
         }
 
         function renderTimeline() {
@@ -1133,7 +1205,6 @@
             populateStartTimes();
             populateDurationOptions();
             
-            // Tampilkan pilihan DP jika fitur Booking Fee diaktifkan di Pengaturan Pemilik
             const bfContainer = document.getElementById('form-container-booking-fee');
             const bfInput = document.getElementById('form-booking-fee');
             if (bfContainer && bfInput) {
@@ -1324,11 +1395,9 @@
             if (document.getElementById('modal-manage-duration')) document.getElementById('modal-manage-duration').innerText = `${durationHrs} Jam @ ${formatIDR(booking.hourlyRate)}/jam`;
             if (document.getElementById('modal-manage-base-price')) document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.tableFee);
 
-            // Tampilkan Pilihan F&B
             populateFBPicker();
             renderCurrentFBList();
 
-            // Sediakan Opsi Diskon
             const googleBox = document.getElementById('container-google-discount');
             const chkGoogle = document.getElementById('modal-chk-google-discount');
             if (googleBox) {
@@ -1344,7 +1413,6 @@
 
             const isLocked = booking.status === 'COMPLETED' || booking.status === 'PAID';
 
-            // Kunci permanen diskon jika pesanan sudah selesai dibayar
             if (chkGoogle) {
                 chkGoogle.disabled = isLocked;
             }
@@ -1412,11 +1480,11 @@
                     id: prod.id,
                     name: prod.name,
                     price: prod.price,
-                    qty: qty
+                    qty: qty,
+                    delivered: false
                 });
             }
 
-            // AUTO-SAVE F&B: Langsung simpan ke cloud/lokal
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (booking) {
                 booking.items = [...state.currentFBItems];
@@ -1425,13 +1493,14 @@
 
             renderCurrentFBList();
             recalculateManageSummary();
+            renderOrdersPage();
+            updateOrderBadges();
             showCustomToast(`Menu "${prod.name}" tersimpan di pesanan meja.`, "success");
         }
 
         function removeFBItem(index) {
             state.currentFBItems.splice(index, 1);
 
-            // AUTO-SAVE F&B: Langsung simpan perubahan
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (booking) {
                 booking.items = [...state.currentFBItems];
@@ -1440,7 +1509,24 @@
 
             renderCurrentFBList();
             recalculateManageSummary();
+            renderOrdersPage();
+            updateOrderBadges();
             showCustomToast("Item F&B dihapus dari pesanan.", "info");
+        }
+
+        function toggleManageFBItemDelivered(index) {
+            if (!state.currentFBItems[index]) return;
+            state.currentFBItems[index].delivered = !state.currentFBItems[index].delivered;
+
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (booking) {
+                booking.items = [...state.currentFBItems];
+                saveCloudBooking(booking);
+            }
+
+            renderCurrentFBList();
+            renderOrdersPage();
+            updateOrderBadges();
         }
 
         function renderCurrentFBList() {
@@ -1455,12 +1541,18 @@
 
             state.currentFBItems.forEach((item, idx) => {
                 const subtotal = item.price * item.qty;
+                const isDelivered = !!item.delivered;
                 const div = document.createElement('div');
-                div.className = "flex items-center justify-between text-xs bg-white p-2 rounded-xl border border-slate-200";
+                div.className = `flex items-center justify-between text-xs p-2 rounded-xl border transition ${isDelivered ? 'bg-emerald-50/70 border-emerald-200' : 'bg-white border-slate-200'}`;
                 div.innerHTML = `
                     <div class="flex items-center gap-2">
-                        <span class="font-bold text-slate-800">${item.name}</span>
-                        <span class="text-slate-500 font-mono text-[11px]">x${item.qty} (@ ${formatIDR(item.price)})</span>
+                        <button onclick="toggleManageFBItemDelivered(${idx})" title="Klik untuk ubah status disajikan" class="w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold border transition ${isDelivered ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-400 border-slate-300 hover:border-emerald-500'}">
+                            ${isDelivered ? '<i class="fa-solid fa-check"></i>' : ''}
+                        </button>
+                        <div>
+                            <span class="font-bold ${isDelivered ? 'line-through text-slate-500' : 'text-slate-800'}">${item.name}</span>
+                            <span class="text-slate-500 font-mono text-[11px] ml-1">x${item.qty}</span>
+                        </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="font-bold text-emerald-700">${formatIDR(subtotal)}</span>
@@ -1480,14 +1572,12 @@
             const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
             const subtotal = tableFee + fbFee;
 
-            // Diskon Ulasan Google (5%)
             let googleDiscountAmt = 0;
             const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
             if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
                 googleDiscountAmt = Math.round(subtotal * 0.05);
             }
 
-            // Diskon Durasi Otomatis
             let autoDiscountAmt = 0;
             let autoDiscountLabel = "Tidak ada";
             const durationHrs = booking.durationSlots * 0.25;
@@ -1525,7 +1615,6 @@
             if (document.getElementById('summary-table-fee')) document.getElementById('summary-table-fee').innerText = formatIDR(tableFee);
             if (document.getElementById('summary-fb-fee')) document.getElementById('summary-fb-fee').innerText = formatIDR(fbFee);
             
-            // Tampilkan rincian masing-masing diskon
             const rowGoogle = document.getElementById('row-discount-google');
             if (rowGoogle) {
                 if (googleDiscountAmt > 0) {
@@ -1629,6 +1718,8 @@
             closeManageModal();
             renderTimeline();
             renderTransactions();
+            renderOrdersPage();
+            updateOrderBadges();
             showCustomToast(`Pembayaran dikonfirmasi! ${formatIDR(finalTotal)} telah dicatat Lunas.`, "success");
         }
 
@@ -1672,6 +1763,8 @@
                 closeManageModal();
                 renderTimeline();
                 renderTransactions();
+                renderOrdersPage();
+                updateOrderBadges();
                 showCustomToast("Pemesanan berhasil dibatalkan dan meja telah dilepaskan.", "info");
             }
         }
@@ -1940,6 +2033,219 @@
                 </body>
                 </html>
             `;
+        }
+
+        function setOrderFilter(filter) {
+            state.ordersFilter = filter;
+
+            const btnAll = document.getElementById('filter-btn-all');
+            const btnPending = document.getElementById('filter-btn-pending');
+            const btnDelivered = document.getElementById('filter-btn-delivered');
+
+            const activeClass = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white shadow-sm transition";
+            const inactiveClass = "px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition";
+
+            if (btnAll) btnAll.className = filter === 'ALL' ? activeClass : inactiveClass;
+            if (btnPending) btnPending.className = (filter === 'PENDING' ? activeClass : inactiveClass) + " flex items-center gap-1.5";
+            if (btnDelivered) btnDelivered.className = filter === 'DELIVERED' ? activeClass : inactiveClass;
+
+            renderOrdersPage();
+        }
+
+        function toggleFBItemDelivered(bookingId, itemIndex) {
+            const booking = state.bookings.find(b => b.id === bookingId);
+            if (!booking || !booking.items || !booking.items[itemIndex]) return;
+
+            booking.items[itemIndex].delivered = !booking.items[itemIndex].delivered;
+            saveCloudBooking(booking);
+
+            if (state.activeBookingId === bookingId) {
+                state.currentFBItems = [...booking.items];
+                renderCurrentFBList();
+            }
+
+            renderOrdersPage();
+            updateOrderBadges();
+            showCustomToast(`Status pesanan "${booking.items[itemIndex].name}" diperbarui.`, "info");
+        }
+
+        function setAllTableOrdersDelivered(bookingId) {
+            const booking = state.bookings.find(b => b.id === bookingId);
+            if (!booking || !booking.items || booking.items.length === 0) return;
+
+            booking.items.forEach(i => i.delivered = true);
+            saveCloudBooking(booking);
+
+            if (state.activeBookingId === bookingId) {
+                state.currentFBItems = [...booking.items];
+                renderCurrentFBList();
+            }
+
+            renderOrdersPage();
+            updateOrderBadges();
+            showCustomToast(`Semua pesanan Meja ${booking.table} ditandai Sudah Disajikan!`, "success");
+        }
+
+        function renderOrdersPage() {
+            const gridContainer = document.getElementById('orders-table-grid');
+            if (!gridContainer) return;
+
+            const dayBookings = state.bookings.filter(b => b.date === state.selectedDate && b.status !== "CANCELLED");
+            const bookingsWithItems = dayBookings.filter(b => b.items && b.items.length > 0);
+
+            let totalPendingCount = 0;
+            let totalDeliveredCount = 0;
+            const pendingMap = {};
+
+            bookingsWithItems.forEach(b => {
+                b.items.forEach(i => {
+                    if (i.delivered) {
+                        totalDeliveredCount += (i.qty || 1);
+                    } else {
+                        totalPendingCount += (i.qty || 1);
+                        pendingMap[i.name] = (pendingMap[i.name] || 0) + (i.qty || 1);
+                    }
+                });
+            });
+
+            const statPending = document.getElementById('orders-pending-stat');
+            const statCompleted = document.getElementById('orders-completed-stat');
+            const filterPendingCount = document.getElementById('filter-pending-count');
+            const summaryText = document.getElementById('orders-quick-summary-text');
+
+            if (statPending) statPending.innerText = `${totalPendingCount} Item Menunggu`;
+            if (statCompleted) statCompleted.innerText = `${totalDeliveredCount} Item Selesai`;
+            if (filterPendingCount) filterPendingCount.innerText = totalPendingCount;
+
+            if (summaryText) {
+                const pendingKeys = Object.keys(pendingMap);
+                if (pendingKeys.length === 0) {
+                    summaryText.innerText = "Semua pesanan F&B hari ini telah disajikan dengan lengkap! 🎉";
+                } else {
+                    summaryText.innerText = pendingKeys.slice(0, 4).map(name => `${pendingMap[name]}x ${name}`).join(", ") + (pendingKeys.length > 4 ? `, +${pendingKeys.length - 4} lainnya` : "");
+                }
+            }
+
+            gridContainer.innerHTML = '';
+
+            if (bookingsWithItems.length === 0) {
+                gridContainer.innerHTML = `
+                    <div class="col-span-full py-16 text-center text-slate-400">
+                        <i class="fa-solid fa-mug-hot text-4xl mb-3 block opacity-40"></i>
+                        <p class="font-bold text-sm text-slate-600">Belum Ada Pesanan F&B pada Tanggal Ini</p>
+                        <p class="text-xs text-slate-400 mt-1">Pesanan yang dimasukkan kasir di jadwal meja akan langsung muncul di sini secara real-time.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            bookingsWithItems.forEach(b => {
+                let displayedItems = b.items || [];
+                if (state.ordersFilter === 'PENDING') {
+                    displayedItems = displayedItems.filter(i => !i.delivered);
+                } else if (state.ordersFilter === 'DELIVERED') {
+                    displayedItems = displayedItems.filter(i => !!i.delivered);
+                }
+
+                if (displayedItems.length === 0 && state.ordersFilter !== 'ALL') return;
+
+                const startStr = slotIndexToTime(b.startSlot);
+                const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
+                const isPaid = b.status === "COMPLETED" || b.status === "PAID";
+                const hasPendingItems = b.items.some(i => !i.delivered);
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between transition hover:shadow-md";
+
+                let itemsHtml = '';
+                b.items.forEach((item, originalIndex) => {
+                    if (state.ordersFilter === 'PENDING' && item.delivered) return;
+                    if (state.ordersFilter === 'DELIVERED' && !item.delivered) return;
+
+                    const isDone = !!item.delivered;
+                    itemsHtml += `
+                        <div class="flex items-center justify-between p-2.5 rounded-xl border transition ${isDone ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/70 border-amber-200'}">
+                            <div class="flex items-center gap-2.5">
+                                <button onclick="toggleFBItemDelivered('${b.id}', ${originalIndex})" title="Klik untuk ubah status" class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs border transition ${isDone ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-amber-500 border-amber-300 hover:border-emerald-500'}">
+                                    ${isDone ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-clock"></i>'}
+                                </button>
+                                <div>
+                                    <span class="font-bold text-xs ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">${item.name}</span>
+                                    <span class="text-[11px] font-mono text-slate-500 block">x${item.qty} (@ ${formatIDR(item.price)})</span>
+                                </div>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${isDone ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-200 text-amber-900 border border-amber-300 animate-pulse'}">
+                                ${isDone ? 'Sudah Keluar' : 'Menunggu'}
+                            </span>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full ${hasPendingItems ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}"></span>
+                                <h3 class="font-black text-slate-900 text-base">Meja ${b.table}</h3>
+                                <span class="text-xs font-bold text-slate-600 truncate max-w-[120px]">(${b.name})</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+                                ${isPaid ? 'Lunas' : 'Main'}
+                            </span>
+                        </div>
+                        <div class="text-[11px] text-slate-500 font-semibold py-1.5 flex items-center justify-between">
+                            <span><i class="fa-solid fa-clock mr-1 text-slate-400"></i> ${startStr} - ${endStr}</span>
+                            <span class="font-mono">#${b.id}</span>
+                        </div>
+                        <div class="flex flex-col gap-1.5 mt-2">
+                            ${itemsHtml || '<span class="text-xs text-slate-400 italic py-2 text-center">Tidak ada item sesuai filter.</span>'}
+                        </div>
+                    </div>
+
+                    <div class="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <button onclick="openManageModal('${b.id}')" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-receipt"></i> Kelola di POS
+                        </button>
+                        ${hasPendingItems ? `
+                            <button onclick="setAllTableOrdersDelivered('${b.id}')" class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1">
+                                <i class="fa-solid fa-check-double"></i> Selesaikan Semua
+                            </button>
+                        ` : `
+                            <span class="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check"></i> Lengkap
+                            </span>
+                        `}
+                    </div>
+                `;
+
+                gridContainer.appendChild(card);
+            });
+        }
+
+        function updateOrderBadges() {
+            const dayBookings = state.bookings.filter(b => b.date === state.selectedDate && b.status !== "CANCELLED");
+            let pendingCount = 0;
+
+            dayBookings.forEach(b => {
+                if (b.items && b.items.length > 0) {
+                    b.items.forEach(i => {
+                        if (!i.delivered) pendingCount += (i.qty || 1);
+                    });
+                }
+            });
+
+            const navBadge = document.getElementById('nav-orders-badge');
+            if (navBadge) {
+                if (pendingCount > 0) {
+                    navBadge.innerText = pendingCount;
+                    navBadge.classList.remove('hidden');
+                } else {
+                    navBadge.classList.add('hidden');
+                }
+            }
+
+            const filterBadge = document.getElementById('filter-pending-count');
+            if (filterBadge) filterBadge.innerText = pendingCount;
         }
 
         function renderTransactions() {
@@ -2357,7 +2663,9 @@
             initFirebase();
             setupDates();
             renderTimeline();
-            lockApp(); // Selalu buka layar kunci kasir saat dimuat pertama kali
+            renderOrdersPage();
+            updateOrderBadges();
+            lockApp();
         };
     </script>
 </body>
