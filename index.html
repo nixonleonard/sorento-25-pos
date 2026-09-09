@@ -1785,36 +1785,60 @@
 
         function printThermalReceipt(booking) {
             const receiptContent = generateReceiptHtml(booking);
+            const isAndroidOrMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-            let printFrame = document.getElementById('thermal-print-frame');
-            if (!printFrame) {
-                printFrame = document.createElement('iframe');
-                printFrame.id = 'thermal-print-frame';
-                printFrame.style.position = 'fixed';
-                printFrame.style.right = '0';
-                printFrame.style.bottom = '0';
-                printFrame.style.width = '0';
-                printFrame.style.height = '0';
-                printFrame.style.border = 'none';
-                document.body.appendChild(printFrame);
-            }
-
-            const frameDoc = printFrame.contentWindow.document;
-            frameDoc.open();
-            frameDoc.write(receiptContent);
-            frameDoc.close();
-
-            showCustomToast("Mengirim struk ke dialog printer...", "info");
-
-            setTimeout(() => {
-                try {
-                    printFrame.contentWindow.focus();
-                    printFrame.contentWindow.print();
-                } catch (err) {
-                    console.error("Gagal memanggil fungsi print:", err);
-                    showCustomToast("Gagal membuka jendela printer.", "error");
+            if (isAndroidOrMobile) {
+                // Untuk Android / HP: Buka jendela cetak sistem Android secara langsung
+                const printWin = window.open('', '_blank');
+                if (printWin) {
+                    printWin.document.open();
+                    printWin.document.write(receiptContent);
+                    printWin.document.close();
+                    
+                    // Beri jeda sejenak agar CSS & layout selesai dirender sebelum dialog print Android muncul
+                    setTimeout(() => {
+                        try {
+                            printWin.focus();
+                            printWin.print();
+                        } catch (err) {
+                            console.error("Gagal print di Android:", err);
+                        }
+                    }, 400);
+                } else {
+                    showCustomToast("Izinkan pop-up di browser untuk mencetak struk.", "error");
                 }
-            }, 350);
+            } else {
+                // Untuk Komputer / Laptop Desktop: Gunakan silent iframe
+                let printFrame = document.getElementById('thermal-print-frame');
+                if (!printFrame) {
+                    printFrame = document.createElement('iframe');
+                    printFrame.id = 'thermal-print-frame';
+                    printFrame.style.position = 'fixed';
+                    printFrame.style.right = '0';
+                    printFrame.style.bottom = '0';
+                    printFrame.style.width = '0';
+                    printFrame.style.height = '0';
+                    printFrame.style.border = 'none';
+                    document.body.appendChild(printFrame);
+                }
+
+                const frameDoc = printFrame.contentWindow.document;
+                frameDoc.open();
+                frameDoc.write(receiptContent);
+                frameDoc.close();
+
+                showCustomToast("Mengirim struk ke dialog printer...", "info");
+
+                setTimeout(() => {
+                    try {
+                        printFrame.contentWindow.focus();
+                        printFrame.contentWindow.print();
+                    } catch (err) {
+                        console.error("Gagal memanggil fungsi print:", err);
+                        showCustomToast("Gagal membuka jendela printer.", "error");
+                    }
+                }, 350);
+            }
         }
 
         function generateReceiptHtml(booking) {
