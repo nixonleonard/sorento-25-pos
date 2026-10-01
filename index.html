@@ -56,7 +56,7 @@
             backdrop-filter: blur(6px);
         }
 
-        /* ATURAN CETAK STRUK THERMAL (Versi Lebar Penuh & Bersih Tanpa Badge Lunas) */
+        /* ATURAN CETAK STRUK THERMAL (Versi Asli Bersih Tanpa Toast & Tanpa Badge) */
         @media print {
             @page {
                 size: 58mm auto;
@@ -70,23 +70,23 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            /* Sembunyikan seluruh UI web utama saat mencetak */
-            header, main, #modal-create-booking, #modal-manage-booking, #modal-pin-cancel, #modal-app-lock, #modal-offline-lock, #modal-receipt-preview {
+            /* Sembunyikan seluruh UI web utama dan notifikasi toast saat mencetak */
+            header, main, #modal-create-booking, #modal-manage-booking, #modal-pin-cancel, #modal-app-lock, #modal-offline-lock, div[class*="fixed bottom-6"] {
                 display: none !important;
             }
             /* Kontainer struk termal ukuran 58mm */
             #thermal-print-direct-container {
                 display: block !important;
                 visibility: visible !important;
-                width: 100% !important;
-                max-width: 100% !important;
+                width: 48mm !important;
+                max-width: 48mm !important;
                 margin: 0 auto !important;
-                padding: 4px 6px !important;
+                padding: 3mm 1mm !important;
                 box-sizing: border-box !important;
                 color: #000000 !important;
                 background: #ffffff !important;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-                line-height: 1.3 !important;
+                line-height: 1.25 !important;
             }
             #thermal-print-direct-container * {
                 visibility: visible !important;
@@ -97,7 +97,7 @@
 </head>
 <body class="h-full flex flex-col bg-slate-100 text-slate-800 overflow-hidden select-none">
 
-    <!-- KONTAINER KHUSUS CETAK STRUK LANGSUNG (TERSEMBUNYI SAAT LAYAR NORMAL) -->
+    <!-- KONTAINER KHUSUS CETAK STRUK LANGSUNG -->
     <div id="thermal-print-direct-container" class="hidden"></div>
 
     <header class="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between shadow-sm shrink-0">
@@ -745,44 +745,11 @@
                     <span class="text-emerald-800 text-xs font-semibold flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-lock"></i> Pembayaran Lunas. Pemesanan terkunci secara permanen.
                     </span>
-                    <button onclick="handlePrintReceipt()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
-                        <i class="fa-solid fa-receipt text-sm"></i>
-                        <span>Lihat & Cetak Struk (8 Bamboo)</span>
+                    <button onclick="handlePrintReceipt()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Cetak Struk Pembayaran</span>
                     </button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL PRATINJAU STRUK THERMAL SEBELUM CETAK -->
-    <div id="modal-receipt-preview" class="fixed inset-0 bg-slate-900/70 modal-blur z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
-            <div class="bg-slate-100 px-5 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0">
-                <div class="flex items-center gap-2">
-                    <span class="text-base">🀄</span>
-                    <h3 class="font-extrabold text-sm text-slate-800">Pratinjau Struk Pembayaran</h3>
-                </div>
-                <button onclick="closeReceiptPreview()" class="w-7 h-7 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition text-xs">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-            </div>
-
-            <!-- Area Tampilan Lembar Struk di Layar -->
-            <div class="p-4 overflow-y-auto flex-1 bg-slate-200/60 flex justify-center">
-                <div id="receipt-preview-content" class="bg-white text-black p-4 rounded shadow-md border border-slate-300 w-full max-w-[280px]">
-                    <!-- Konten struk diisi dinamis oleh JavaScript -->
-                </div>
-            </div>
-
-            <!-- Tombol Aksi Cetak atau Tutup -->
-            <div class="p-3.5 bg-white border-t border-slate-200 flex gap-2 shrink-0">
-                <button type="button" onclick="closeReceiptPreview()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl text-xs transition">
-                    Tutup
-                </button>
-                <button type="button" onclick="executeDirectPrint()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-2.5 rounded-xl text-xs transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-print"></i>
-                    <span>Cetak ke Printer</span>
-                </button>
             </div>
         </div>
     </div>
@@ -1855,53 +1822,21 @@
                 return;
             }
 
-            openReceiptPreview(booking);
-        }
-
-        function openReceiptPreview(booking) {
-            const previewContainer = document.getElementById('receipt-preview-content');
-            if (previewContainer) {
-                previewContainer.innerHTML = buildReceiptDOMString(booking);
-            }
-            // Siapkan wadah cetak langsung saat tombol cetak ditekan
-            const printContainer = document.getElementById('thermal-print-direct-container');
-            if (printContainer) {
-                printContainer.innerHTML = buildReceiptDOMString(booking);
-            }
-            document.getElementById('modal-receipt-preview')?.classList.remove('hidden');
-        }
-
-        function closeReceiptPreview() {
-            document.getElementById('modal-receipt-preview')?.classList.add('hidden');
-        }
-
-        function executeDirectPrint() {
-            showCustomToast("Membuka printer...", "info");
-            setTimeout(() => {
-                try {
-                    window.print();
-                } catch (err) {
-                    console.error("Gagal memanggil fungsi window.print():", err);
-                    showCustomToast("Gagal membuka dialog printer.", "error");
-                }
-            }, 150);
+            printThermalReceipt(booking);
         }
 
         /* 
-           FUNGSI CETAK LANGSUNG (IN-PAGE PRINT):
-           Tidak menggunakan window.open yang diblokir oleh Hermit Browser Popup Blocker.
-           Langsung memuat isi struk ke dalam DOM halaman lalu memanggil window.print().
+           FUNGSI CETAK LANGSUNG:
+           Menyiapkan struk Model 1 tanpa memunculkan popup toast agar struk bersih total.
         */
         function printThermalReceipt(booking) {
             const printContainer = document.getElementById('thermal-print-direct-container');
             if (!printContainer) return;
 
-            // Masukkan struktur HTML struk termal 8 Bamboo
+            // Masukkan struktur HTML struk termal 8 Bamboo versi awal
             printContainer.innerHTML = buildReceiptDOMString(booking);
 
-            showCustomToast("Membuka dialog cetak struk...", "info");
-
-            // Beri jeda kecil agar DOM selesai dirender sebelum browser/Hermit memanggil dialog cetak
+            // Jeda 50ms tanpa memunculkan toast banner agar tidak ikut tercetak di kertas
             setTimeout(() => {
                 try {
                     window.print();
@@ -1909,7 +1844,7 @@
                     console.error("Gagal memanggil fungsi window.print():", err);
                     showCustomToast("Gagal membuka dialog printer.", "error");
                 }
-            }, 150);
+            }, 50);
         }
 
         function buildReceiptDOMString(booking) {
@@ -1929,18 +1864,18 @@
             let itemsHtml = '';
             if (items.length > 0) {
                 itemsHtml = items.map(item => `
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 3px; font-size: 11px;">
-                        <span style="font-weight: 700; max-width: 65%; word-break: break-word; color: #000000;">${item.name}</span>
-                        <span style="font-family: monospace; font-weight: 700; white-space: nowrap; font-size: 11px; color: #000000;">${formatIDR(item.price * item.qty)}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 3px; font-size: 8.5px;">
+                        <span style="font-weight: 700; max-width: 65%; word-break: break-word;">${item.name}</span>
+                        <span style="font-family: monospace; font-weight: 700; white-space: nowrap;">${formatIDR(item.price * item.qty)}</span>
                     </div>
-                    <div style="font-size: 9.5px; color: #4b5563; margin-bottom: 2px;">${item.qty} × ${formatIDR(item.price)}</div>
+                    <div style="font-size: 7.5px; color: #4b5563; margin-bottom: 2px;">${item.qty} × ${formatIDR(item.price)}</div>
                 `).join('');
             }
 
             let discountHtml = '';
             if (googleDiscount > 0) {
                 discountHtml += `
-                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #1f2937; margin-bottom: 2px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 8px; color: #1f2937; margin-bottom: 2px;">
                         <span>Diskon Ulasan (5%):</span>
                         <span style="font-family: monospace; font-weight: 600; white-space: nowrap;">-${formatIDR(googleDiscount)}</span>
                     </div>
@@ -1948,7 +1883,7 @@
             }
             if (autoDiscount > 0) {
                 discountHtml += `
-                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #1f2937; margin-bottom: 2px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 8px; color: #1f2937; margin-bottom: 2px;">
                         <span>Diskon Durasi:</span>
                         <span style="font-family: monospace; font-weight: 600; white-space: nowrap;">-${formatIDR(autoDiscount)}</span>
                     </div>
@@ -1956,7 +1891,7 @@
             }
             if (bookingFee > 0) {
                 discountHtml += `
-                    <div style="display: flex; justify-content: space-between; font-size: 10px; color: #1f2937; margin-bottom: 2px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 8px; color: #1f2937; margin-bottom: 2px;">
                         <span>Booking Fee (DP):</span>
                         <span style="font-family: monospace; font-weight: 600; white-space: nowrap;">-${formatIDR(bookingFee)}</span>
                     </div>
@@ -1964,79 +1899,79 @@
             }
 
             return `
-                <div style="text-align: center; margin-bottom: 6px; color: #000000;">
-                    <div style="font-size: 15px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; line-height: 1.2;">🀄 8 BAMBOO 🀄</div>
-                    <div style="font-size: 9.5px; color: #374151; line-height: 1.25; margin-top: 3px;">
+                <div style="text-align: center; margin-bottom: 4px;">
+                    <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">🀄 8 BAMBOO 🀄</div>
+                    <div style="font-size: 7.5px; color: #374151; line-height: 1.25; margin-top: 2px;">
                         Ruko South Sorrento No.25, Cihuni, Kec. Pagedangan,<br>
                         Kabupaten Tangerang, Banten 15332
                     </div>
-                    <div style="font-size: 9.5px; color: #4b5563; margin-top: 2px;">Jam Operasional: 10:00 - 02:00 WIB</div>
+                    <div style="font-size: 7.5px; color: #4b5563; margin-top: 2px;">Jam Operasional: 10:00 - 02:00 WIB</div>
                 </div>
 
-                <div style="border-top: 1px dashed #6b7280; margin: 5px 0;"></div>
+                <div style="border-top: 1px dashed #6b7280; margin: 4px 0;"></div>
 
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">No. Struk:</span>
                     <span style="font-weight: 700; font-family: monospace;">#${booking.id}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Waktu Bayar:</span>
                     <span style="font-family: monospace;">${formatDateTime(booking.completedOrCancelledTime || new Date().toISOString())}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Pelanggan:</span>
                     <span style="font-weight: 700;">${booking.name}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Nomor HP:</span>
                     <span style="font-family: monospace;">${booking.phone}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Meja:</span>
                     <span style="font-weight: 800;">MEJA ${booking.table}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Jadwal Main:</span>
                     <span>${booking.date}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Waktu:</span>
                     <span style="font-family: monospace;">${startStr} - ${endStr}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; margin-bottom: 2px; color: #111827;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 2px; color: #111827;">
                     <span style="color: #4b5563;">Durasi:</span>
                     <span style="font-weight: 700;">${durationHrs} Jam</span>
                 </div>
 
-                <div style="border-top: 1px dashed #6b7280; margin: 6px 0 5px 0;"></div>
+                <div style="border-top: 1px dashed #6b7280; margin: 4px 0;"></div>
 
-                <div style="font-size: 10px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 3px;">Rincian Item</div>
+                <div style="font-size: 8px; font-weight: 700; color: #4b5563; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Rincian Item</div>
 
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px; font-size: 11px;">
-                    <span style="font-weight: 700; color: #000000;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
-                    <span style="font-family: monospace; font-weight: 700; white-space: nowrap; font-size: 11px; color: #000000;">${formatIDR(tableFee)}</span>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px; font-size: 8.5px;">
+                    <span style="font-weight: 700;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
+                    <span style="font-family: monospace; font-weight: 700; white-space: nowrap;">${formatIDR(tableFee)}</span>
                 </div>
-                <div style="font-size: 9.5px; color: #4b5563; margin-bottom: 2px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
+                <div style="font-size: 7.5px; color: #4b5563; margin-bottom: 2px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
 
                 ${itemsHtml}
 
-                <div style="border-top: 1px dashed #6b7280; margin: 5px 0;"></div>
+                <div style="border-top: 1px dashed #6b7280; margin: 4px 0;"></div>
 
-                <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #1f2937; margin-bottom: 2px;">
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; color: #1f2937; margin-bottom: 2px;">
                     <span>Subtotal:</span>
                     <span style="font-family: monospace; font-weight: 600;">${formatIDR(subtotal)}</span>
                 </div>
 
                 ${discountHtml}
 
-                <div style="border-top: 1.5px solid #000000; margin: 6px 0 5px 0;"></div>
+                <div style="border-top: 1.5px solid #000000; margin: 5px 0 4px 0;"></div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; color: #000000;">
-                    <span style="font-size: 11.5px; font-weight: 800; text-transform: uppercase;">TOTAL AKHIR:</span>
-                    <span style="font-family: monospace; font-size: 15px; font-weight: 900;">${formatIDR(finalTotal)}</span>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 9.5px; font-weight: 800; text-transform: uppercase;">TOTAL AKHIR:</span>
+                    <span style="font-family: monospace; font-size: 12px; font-weight: 900;">${formatIDR(finalTotal)}</span>
                 </div>
 
-                <div style="font-size: 9.5px; text-align: center; margin-top: 8px; padding-top: 5px; border-top: 1px dashed #9ca3af; color: #374151; line-height: 1.3;">
+                <div style="font-size: 7.5px; text-align: center; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #9ca3af; color: #374151; line-height: 1.25;">
                     Terima kasih atas kunjungan Anda di 8 Bamboo!<br>
                     Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄
                 </div>
