@@ -55,9 +55,49 @@
         .modal-blur {
             backdrop-filter: blur(6px);
         }
+
+        /* ATURAN KHUSUS CETAK STRUK THERMAL (Kompatibel 100% dengan Hermit Lite App & Android Print Spooler) */
+        @media print {
+            @page {
+                size: 58mm auto;
+                margin: 0;
+            }
+            body {
+                background: #ffffff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            /* Sembunyikan seluruh UI web utama saat mencetak */
+            header, main, #modal-create-booking, #modal-manage-booking, #modal-pin-cancel, #modal-app-lock, #modal-offline-lock {
+                display: none !important;
+            }
+            /* Hanya tampilkan kontainer struk thermal */
+            #thermal-print-direct-container {
+                display: block !important;
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 48mm !important;
+                max-width: 48mm !important;
+                margin: 0 auto !important;
+                padding: 4px 1px !important;
+                color: #000000 !important;
+                background: #ffffff !important;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+                font-size: 9px !important;
+                line-height: 1.25 !important;
+            }
+            #thermal-print-direct-container * {
+                visibility: visible !important;
+            }
+        }
     </style>
 </head>
 <body class="h-full flex flex-col bg-slate-100 text-slate-800 overflow-hidden select-none">
+
+    <!-- KONTAINER KHUSUS CETAK STRUK LANGSUNG (TERSEMBUNYI SAAT LAYAR NORMAL) -->
+    <div id="thermal-print-direct-container" class="hidden"></div>
 
     <header class="bg-white border-b border-slate-200 px-5 py-3 flex items-center justify-between shadow-sm shrink-0">
         <div class="flex items-center gap-3">
@@ -704,8 +744,9 @@
                     <span class="text-emerald-800 text-xs font-semibold flex items-center justify-center gap-1.5">
                         <i class="fa-solid fa-lock"></i> Pembayaran Lunas. Pemesanan terkunci secara permanen.
                     </span>
-                    <button onclick="handlePrintReceipt()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-print"></i> Cetak Struk Pembayaran (8 Bamboo)
+                    <button onclick="handlePrintReceipt()" class="w-full bg-slate-800 hover:bg-slate-900 active:scale-95 text-white font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-print text-sm"></i>
+                        <span>Cetak Struk Pembayaran (8 Bamboo)</span>
                     </button>
                 </div>
             </div>
@@ -1783,65 +1824,32 @@
             printThermalReceipt(booking);
         }
 
+        /* 
+           FUNGSI CETAK LANGSUNG (IN-PAGE PRINT):
+           Tidak menggunakan window.open yang diblokir oleh Hermit Browser Popup Blocker.
+           Langsung memuat isi struk ke dalam DOM halaman lalu memanggil window.print().
+        */
         function printThermalReceipt(booking) {
-            const receiptContent = generateReceiptHtml(booking);
-            const isAndroidOrMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const printContainer = document.getElementById('thermal-print-direct-container');
+            if (!printContainer) return;
 
-            if (isAndroidOrMobile) {
-                // Untuk Android / HP: Buka jendela cetak sistem Android secara langsung
-                const printWin = window.open('', '_blank');
-                if (printWin) {
-                    printWin.document.open();
-                    printWin.document.write(receiptContent);
-                    printWin.document.close();
-                    
-                    // Beri jeda sejenak agar CSS & layout selesai dirender sebelum dialog print Android muncul
-                    setTimeout(() => {
-                        try {
-                            printWin.focus();
-                            printWin.print();
-                        } catch (err) {
-                            console.error("Gagal print di Android:", err);
-                        }
-                    }, 400);
-                } else {
-                    showCustomToast("Izinkan pop-up di browser untuk mencetak struk.", "error");
+            // Masukkan struktur HTML struk termal 8 Bamboo
+            printContainer.innerHTML = buildReceiptDOMString(booking);
+
+            showCustomToast("Membuka dialog cetak struk...", "info");
+
+            // Beri jeda kecil agar DOM selesai dirender sebelum browser/Hermit memanggil dialog cetak
+            setTimeout(() => {
+                try {
+                    window.print();
+                } catch (err) {
+                    console.error("Gagal memanggil fungsi window.print():", err);
+                    showCustomToast("Gagal membuka dialog printer.", "error");
                 }
-            } else {
-                // Untuk Komputer / Laptop Desktop: Gunakan silent iframe
-                let printFrame = document.getElementById('thermal-print-frame');
-                if (!printFrame) {
-                    printFrame = document.createElement('iframe');
-                    printFrame.id = 'thermal-print-frame';
-                    printFrame.style.position = 'fixed';
-                    printFrame.style.right = '0';
-                    printFrame.style.bottom = '0';
-                    printFrame.style.width = '0';
-                    printFrame.style.height = '0';
-                    printFrame.style.border = 'none';
-                    document.body.appendChild(printFrame);
-                }
-
-                const frameDoc = printFrame.contentWindow.document;
-                frameDoc.open();
-                frameDoc.write(receiptContent);
-                frameDoc.close();
-
-                showCustomToast("Mengirim struk ke dialog printer...", "info");
-
-                setTimeout(() => {
-                    try {
-                        printFrame.contentWindow.focus();
-                        printFrame.contentWindow.print();
-                    } catch (err) {
-                        console.error("Gagal memanggil fungsi print:", err);
-                        showCustomToast("Gagal membuka jendela printer.", "error");
-                    }
-                }, 350);
-            }
+            }, 150);
         }
 
-        function generateReceiptHtml(booking) {
+        function buildReceiptDOMString(booking) {
             const startStr = slotIndexToTime(booking.startSlot);
             const endStr = slotIndexToTime(booking.startSlot + booking.durationSlots);
             const durationHrs = booking.durationSlots * 0.25;
@@ -1893,169 +1901,89 @@
             }
 
             return `
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <meta charset="UTF-8">
-                    <title>Struk Pembayaran #${booking.id} - 8 Bamboo</title>
-                    <style>
-                        @page {
-                            margin: 0;
-                            size: 58mm auto;
-                        }
-                        @media print {
-                            html, body {
-                                width: 100% !important;
-                                margin: 0 !important;
-                                padding: 2px 1px !important;
-                            }
-                            .receipt-box {
-                                width: 100% !important;
-                                max-width: 48mm !important;
-                                margin: 0 auto !important;
-                                padding: 0 !important;
-                            }
-                        }
-                        * { 
-                            box-sizing: border-box; 
-                            margin: 0; 
-                            padding: 0; 
-                        }
-                        body {
-                            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                            width: 48mm;
-                            margin: 0 auto;
-                            padding: 4px 1px;
-                            color: #000000;
-                            font-size: 9px;
-                            line-height: 1.25;
-                            background: #ffffff;
-                            word-break: break-word;
-                        }
-                        .receipt-box {
-                            width: 100%;
-                            max-width: 48mm;
-                        }
-                        .text-center { text-align: center; }
-                        .text-right { text-align: right; }
-                        .font-bold { font-weight: 700; }
-                        .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-                        .title { font-size: 13px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase; margin-bottom: 2px; }
-                        .address { font-size: 7.5px; color: #374151; line-height: 1.2; margin-bottom: 2px; }
-                        .hours { font-size: 7.5px; color: #4b5563; margin-bottom: 3px; }
-                        .divider-thin { border-top: 1px dashed #6b7280; margin: 4px 0; }
-                        .divider-thick { border-top: 1.5px solid #000000; margin: 5px 0 4px 0; }
-                        .line-item { display: flex; justify-content: space-between; margin-bottom: 1.5px; font-size: 8.5px; }
-                        .total-row { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
-                        .badge-paid {
-                            display: inline-block;
-                            border: 1px solid #000000;
-                            padding: 1.5px 8px;
-                            font-weight: 800;
-                            font-size: 8.5px;
-                            letter-spacing: 1px;
-                            text-transform: uppercase;
-                            margin-top: 4px;
-                        }
-                        .footer-note {
-                            font-size: 7.5px;
-                            text-align: center;
-                            margin-top: 6px;
-                            padding-top: 4px;
-                            border-top: 1px dashed #9ca3af;
-                            color: #374151;
-                            line-height: 1.25;
-                        }
-                    </style>
-                </head>
-                <body>
-                    <div class="receipt-box">
-                        <div class="text-center">
-                            <div class="title">🀄 8 BAMBOO 🀄</div>
-                            <div class="address">
-                                Ruko South Sorrento No.25, Cihuni, Pagedangan, Kab. Tangerang 15332
-                            </div>
-                            <div class="hours">10:00 - 02:00 WIB</div>
-                        </div>
-
-                        <div class="divider-thin"></div>
-
-                        <div class="line-item">
-                            <span style="color: #4b5563;">No. Struk:</span>
-                            <span class="font-bold font-mono">#${booking.id}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">Waktu Bayar:</span>
-                            <span class="font-mono">${formatDateTime(booking.completedOrCancelledTime || new Date().toISOString())}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">Pelanggan:</span>
-                            <span class="font-bold">${booking.name}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">No. HP:</span>
-                            <span class="font-mono">${booking.phone}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">Meja:</span>
-                            <span class="font-bold">MEJA ${booking.table}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">Jadwal:</span>
-                            <span>${booking.date}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">Waktu Main:</span>
-                            <span class="font-mono">${startStr} - ${endStr}</span>
-                        </div>
-                        <div class="line-item">
-                            <span style="color: #4b5563;">Durasi:</span>
-                            <span class="font-bold">${durationHrs} Jam</span>
-                        </div>
-
-                        <div class="divider-thin"></div>
-
-                        <div style="font-size: 8px; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 2px;">Rincian Item</div>
-
-                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 1.5px;">
-                            <span style="font-weight: 600;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
-                            <span class="font-mono" style="font-weight: 600; white-space: nowrap;">${formatIDR(tableFee)}</span>
-                        </div>
-                        <div style="font-size: 8px; color: #4b5563; margin-bottom: 2px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
-
-                        ${itemsHtml ? `
-                            <div style="margin-top: 2px;">
-                                ${itemsHtml}
-                            </div>
-                        ` : ''}
-
-                        <div class="divider-thin"></div>
-
-                        <div class="line-item" style="color: #374151;">
-                            <span>Subtotal:</span>
-                            <span class="font-mono">${formatIDR(subtotal)}</span>
-                        </div>
-
-                        ${discountHtml}
-
-                        <div class="divider-thick"></div>
-
-                        <div class="total-row">
-                            <span style="font-size: 10px; font-weight: 800; text-transform: uppercase;">TOTAL AKHIR:</span>
-                            <span class="font-mono" style="font-size: 12px; font-weight: 900;">${formatIDR(finalTotal)}</span>
-                        </div>
-
-                        <div class="text-center">
-                            <span class="badge-paid">LUNAS / PAID</span>
-                        </div>
-
-                        <div class="footer-note">
-                            Terima kasih atas kunjungan Anda di 8 Bamboo!<br>
-                            Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄
-                        </div>
+                <div style="text-align: center; margin-bottom: 4px;">
+                    <div style="font-size: 13px; font-weight: 900; letter-spacing: 0.3px; text-transform: uppercase;">🀄 8 BAMBOO 🀄</div>
+                    <div style="font-size: 7.5px; color: #374151; line-height: 1.2; margin-top: 1px;">
+                        Ruko South Sorrento No.25, Cihuni, Pagedangan, Kab. Tangerang 15332
                     </div>
-                </body>
-                </html>
+                    <div style="font-size: 7.5px; color: #4b5563; margin-top: 1px;">10:00 - 02:00 WIB</div>
+                </div>
+
+                <div style="border-top: 1px dashed #6b7280; margin: 4px 0;"></div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">No. Struk:</span>
+                    <span style="font-weight: 700; font-family: monospace;">#${booking.id}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">Waktu Bayar:</span>
+                    <span style="font-family: monospace;">${formatDateTime(booking.completedOrCancelledTime || new Date().toISOString())}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">Pelanggan:</span>
+                    <span style="font-weight: 700;">${booking.name}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">No. HP:</span>
+                    <span style="font-family: monospace;">${booking.phone}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">Meja:</span>
+                    <span style="font-weight: 700;">MEJA ${booking.table}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">Jadwal:</span>
+                    <span>${booking.date}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">Waktu Main:</span>
+                    <span style="font-family: monospace;">${startStr} - ${endStr}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; margin-bottom: 1px;">
+                    <span style="color: #4b5563;">Durasi:</span>
+                    <span style="font-weight: 700;">${durationHrs} Jam</span>
+                </div>
+
+                <div style="border-top: 1px dashed #6b7280; margin: 4px 0;"></div>
+
+                <div style="font-size: 8px; font-weight: 700; color: #4b5563; text-transform: uppercase; margin-bottom: 2px;">Rincian Item</div>
+
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 1.5px;">
+                    <span style="font-weight: 600;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
+                    <span style="font-family: monospace; font-weight: 600; white-space: nowrap;">${formatIDR(tableFee)}</span>
+                </div>
+                <div style="font-size: 8px; color: #4b5563; margin-bottom: 2px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
+
+                ${itemsHtml ? `
+                    <div style="margin-top: 2px;">
+                        ${itemsHtml}
+                    </div>
+                ` : ''}
+
+                <div style="border-top: 1px dashed #6b7280; margin: 4px 0;"></div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 8.5px; color: #374151;">
+                    <span>Subtotal:</span>
+                    <span style="font-family: monospace;">${formatIDR(subtotal)}</span>
+                </div>
+
+                ${discountHtml}
+
+                <div style="border-top: 1.5px solid #000000; margin: 5px 0 4px 0;"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+                    <span style="font-size: 10px; font-weight: 800; text-transform: uppercase;">TOTAL AKHIR:</span>
+                    <span style="font-family: monospace; font-size: 12px; font-weight: 900;">${formatIDR(finalTotal)}</span>
+                </div>
+
+                <div style="text-align: center; margin-top: 4px;">
+                    <span style="display: inline-block; border: 1px solid #000000; padding: 1.5px 8px; font-weight: 800; font-size: 8.5px; letter-spacing: 1px; text-transform: uppercase;">LUNAS / PAID</span>
+                </div>
+
+                <div style="font-size: 7.5px; text-align: center; margin-top: 6px; padding-top: 4px; border-top: 1px dashed #9ca3af; color: #374151; line-height: 1.25;">
+                    Terima kasih atas kunjungan Anda di 8 Bamboo!<br>
+                    Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄
+                </div>
             `;
         }
 
