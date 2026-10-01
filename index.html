@@ -92,6 +92,11 @@
                 visibility: visible !important;
                 box-sizing: border-box !important;
             }
+            /* Kompensasi khusus saat dicetak dari Hermit (Android WebView) agar pas penuh di kertas 58mm */
+            body.hermit-print #thermal-print-direct-container {
+                zoom: 3.7 !important;
+                margin: 0 auto !important;
+            }
         }
     </style>
 </head>
@@ -1833,8 +1838,25 @@
             const printContainer = document.getElementById('thermal-print-direct-container');
             if (!printContainer) return;
 
-            // Masukkan struktur HTML struk termal 8 Bamboo versi awal
+            // Deteksi otomatis jika dicetak dari Hermit / Android WebView
+            const isHermitOrWebView = /Hermit/i.test(navigator.userAgent) || 
+                                      (/Android/i.test(navigator.userAgent) && (/Version\/[0-9.]+/i.test(navigator.userAgent) || /wv/i.test(navigator.userAgent)));
+
+            if (isHermitOrWebView) {
+                document.body.classList.add('hermit-print');
+            } else {
+                document.body.classList.remove('hermit-print');
+            }
+
+            // Masukkan struktur HTML struk termal 8 Bamboo versi asli
             printContainer.innerHTML = buildReceiptDOMString(booking);
+
+            const cleanupHermitClass = () => {
+                document.body.classList.remove('hermit-print');
+                window.removeEventListener('afterprint', cleanupHermitClass);
+            };
+            window.addEventListener('afterprint', cleanupHermitClass);
+            setTimeout(() => document.body.classList.remove('hermit-print'), 4000);
 
             // Jeda 50ms tanpa memunculkan toast banner agar tidak ikut tercetak di kertas
             setTimeout(() => {
