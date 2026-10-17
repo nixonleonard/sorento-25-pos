@@ -56,7 +56,7 @@
             backdrop-filter: blur(6px);
         }
 
-        /* ATURAN CETAK STRUK THERMAL FLUID 100% (FIT LEBAR PRINTER & FONT JELAS) */
+        /* ATURAN CETAK STRUK THERMAL 58MM BEBAS BOCOR & FIT 100% */
         @media print {
             @page {
                 size: auto;
@@ -70,24 +70,22 @@
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
             }
-            /* Sembunyikan semua elemen selain struk thermal */
+            /* Sembunyikan semua elemen di luar kontainer struk fisik */
             body > *:not(#thermal-print-direct-container) {
                 display: none !important;
-                visibility: hidden !important;
             }
-            /* Kontainer struk termal: 100% fit memenuhi kertas printer */
             #thermal-print-direct-container {
                 display: block !important;
                 visibility: visible !important;
                 width: 100% !important;
                 max-width: 100% !important;
                 margin: 0 auto !important;
-                padding: 1.5mm 1.5mm !important;
+                padding: 1.5mm 2.5mm !important;
                 box-sizing: border-box !important;
                 color: #000000 !important;
                 background: #ffffff !important;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-                line-height: 1.35 !important;
+                line-height: 1.25 !important;
             }
             #thermal-print-direct-container * {
                 visibility: visible !important;
@@ -157,14 +155,26 @@
             <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Pilih Tanggal Booking</label>
-                    <input type="date" id="selected-date" onchange="handleDateChange(this.value)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
+                    <div class="flex items-center gap-1">
+                        <button onclick="stepDate(-1)" class="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl text-slate-600 font-bold transition" title="Hari Sebelumnya">
+                            <i class="fa-solid fa-chevron-left text-xs"></i>
+                        </button>
+                        <input type="date" id="selected-date" onchange="handleDateChange(this.value)" class="flex-1 bg-slate-50 border border-slate-300 rounded-xl px-2 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm text-center">
+                        <button onclick="stepDate(1)" class="p-2 bg-slate-50 hover:bg-slate-100 border border-slate-300 rounded-xl text-slate-600 font-bold transition" title="Hari Berikutnya">
+                            <i class="fa-solid fa-chevron-right text-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="flex flex-col gap-1.5">
                     <span class="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">Pintas Tanggal</span>
+                    <button onclick="jumpToDate(-1)" id="btn-date-yesterday" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700">
+                        <span><i class="fa-solid fa-clock-rotate-left mr-2 text-slate-400"></i>Kemarin</span>
+                        <span id="label-date-yesterday" class="text-xs text-slate-400"></span>
+                    </button>
                     <button onclick="jumpToDate(0)" id="btn-date-today" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800">
                         <span><i class="fa-solid fa-calendar-day mr-2 text-emerald-600"></i>Hari Ini</span>
-                        <span id="label-date-today" class="text-xs text-emerald-600"></span>
+                        <span id="label-date-today" class="text-xs text-emerald-600 font-bold"></span>
                     </button>
                     <button onclick="jumpToDate(1)" id="btn-date-tomorrow" class="w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700">
                         <span><i class="fa-solid fa-sun mr-2 text-amber-500"></i>Besok</span>
@@ -183,8 +193,8 @@
                         <span class="text-slate-700 font-semibold">Dibooking (Belum Bayar)</span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span class="w-3.5 h-3.5 rounded-md bg-blue-600 border border-blue-500"></span>
-                        <span class="text-slate-700 font-semibold">Sudah Datang / Main</span>
+                        <span class="w-3.5 h-3.5 rounded-md bg-gradient-to-r from-blue-600 to-indigo-600 border border-blue-500"></span>
+                        <span class="text-slate-700 font-semibold">Sudah Datang (Main)</span>
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="w-3.5 h-3.5 rounded-md bg-emerald-600 border border-emerald-500"></span>
@@ -237,7 +247,7 @@
             </section>
         </div>
 
-        <!-- HALAMAN 2: REKAP PESANAN F&B (LIVE KITCHEN / BAR DISPLAY) -->
+        <!-- HALAMAN 2: REKAP PESANAN F&B (LIVE KITCHEN & BAR DISPLAY) -->
         <div id="page-orders" class="flex-1 flex flex-col w-full h-full overflow-hidden bg-slate-50 hidden">
             <div class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-sm">
                 <div>
@@ -673,21 +683,41 @@
                     </div>
                 </div>
 
-                <!-- Banner & Tombol Kehadiran (Check-in Biru) -->
-                <div id="modal-arrival-banner" class="border rounded-2xl p-3.5 flex items-center justify-between transition bg-slate-50 border-slate-200 text-slate-800">
-                    <div class="flex items-center gap-2.5">
-                        <div id="modal-arrival-icon" class="w-9 h-9 rounded-xl flex items-center justify-center text-sm bg-slate-200 text-slate-500">
-                            <i class="fa-solid fa-user-check"></i>
-                        </div>
-                        <div>
-                            <span id="modal-arrival-title" class="text-xs font-extrabold block text-slate-800">Status: Belum Datang</span>
-                            <span id="modal-arrival-sub" class="text-[11px] text-slate-500">Tandai jika pelanggan sudah berada di meja</span>
-                        </div>
+                <!-- Bagian Check-in Kedatangan Tamu (Berubah Warna Biru di Jadwal) -->
+                <div id="section-arrival-indicator" class="border border-slate-200 rounded-2xl p-3.5 bg-slate-50 flex items-center justify-between">
+                    <div>
+                        <span class="text-xs font-extrabold text-slate-800 block">Kehadiran Tamu di Meja</span>
+                        <span class="text-[11px] text-slate-500" id="modal-arrival-desc">Tandai jika pelanggan sudah tiba dan mulai bermain.</span>
                     </div>
-                    <button type="button" id="btn-toggle-arrival" onclick="toggleActiveBookingArrival()" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm bg-blue-600 hover:bg-blue-700 text-white active:scale-95 shadow-blue-600/20">
-                        <i class="fa-solid fa-check"></i>
-                        <span id="btn-toggle-arrival-text">Tandai Sudah Datang</span>
+                    <button id="btn-toggle-arrival" onclick="toggleActiveBookingArrival()" class="px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-user-check"></i>
+                        <span id="btn-toggle-arrival-label">Tandai Sudah Datang</span>
                     </button>
+                </div>
+
+                <!-- Bagian Tambah Jam Main (1 Tagihan Terpadu) -->
+                <div id="section-extend-duration" class="border border-emerald-200 rounded-2xl p-3.5 bg-emerald-50/50 flex flex-col gap-2.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-clock-rotate-left text-emerald-600"></i> Tambah Jam Main (1 Tagihan)
+                        </span>
+                        <span id="modal-extend-current-end" class="text-[11px] font-mono text-emerald-800 font-bold">Selesai: --:--</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600 leading-snug" id="modal-extend-status-msg">
+                        Pilih tambahan jam main untuk memperpanjang pemesanan ini secara otomatis tanpa membuat tagihan terpisah.
+                    </p>
+                    <div id="modal-extend-form-row" class="flex gap-2 items-center">
+                        <select id="modal-extend-hours-select" onchange="previewExtendPrice()" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold focus:outline-none focus:border-emerald-500"></select>
+                        <button id="btn-execute-extend" onclick="executeExtendBooking()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap">
+                            + Tambah Jam
+                        </button>
+                    </div>
+                    <div id="modal-extend-revert-container" class="hidden pt-1 border-t border-emerald-200/60 flex items-center justify-between">
+                        <span class="text-[11px] text-emerald-800 font-semibold" id="modal-extend-history-label">Durasi telah diperpanjang</span>
+                        <button onclick="revertLastExtension()" class="text-xs font-bold text-rose-600 hover:text-rose-800 underline">
+                            [ ↩ Batalkan Tambah Jam ]
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Bagian Tambah F&B -->
@@ -845,13 +875,32 @@
 
         const TOTAL_SLOTS = 64; // 10:00 s/d 02:00 = 16 Jam (64 slot x 15 menit)
 
+        /* LOGIKA TANGGAL OPERASIONAL: 
+           Jika jam sistem antara 00:00 - 05:59 pagi, shift yang berjalan adalah shift malam tanggal kemarin. */
+        function getBaseOperationalDate() {
+            const now = new Date();
+            if (now.getHours() < 6) {
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                return yesterday;
+            }
+            return now;
+        }
+
+        function getLocalDateISO(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
         let state = {
             dayRates: { Mon: 50000, Tue: 50000, Wed: 50000, Thu: 50000, Fri: 60000, Sat: 75000, Sun: 75000 },
             cashierPin: "1234",
             ownerPin: "1234",
             settingsUnlocked: false,
             appUnlocked: false,
-            selectedDate: new Date().toISOString().split('T')[0],
+            selectedDate: getLocalDateISO(getBaseOperationalDate()),
             activeBookingId: null,
             bookings: [],
             products: [
@@ -917,7 +966,9 @@
         function initFirebase() {
             try {
                 if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("YOUR_API_KEY")) {
-                    firebase.initializeApp(firebaseConfig);
+                    if (!firebase.apps.length) {
+                        firebase.initializeApp(firebaseConfig);
+                    }
                     db = firebase.firestore();
                     auth = firebase.auth();
 
@@ -1082,15 +1133,24 @@
             return `${hh}:${mm}`;
         }
 
+        function getSlotDateTime(dateStr, slotIdx) {
+            const d = new Date(dateStr + 'T00:00:00');
+            const startMinutes = 10 * 60 + (slotIdx * 15);
+            const hours = Math.floor(startMinutes / 60);
+            const mins = startMinutes % 60;
+            if (hours >= 24) {
+                d.setDate(d.getDate() + 1);
+                d.setHours(hours % 24, mins, 0, 0);
+            } else {
+                d.setHours(hours, mins, 0, 0);
+            }
+            return d;
+        }
+
         function isSlotPast(dateStr, slotIdx) {
             const now = new Date();
-            const todayStr = now.toISOString().split('T')[0];
-            if (dateStr < todayStr) return true;
-            if (dateStr > todayStr) return false;
-
-            const slotMinutes = 10 * 60 + (slotIdx * 15);
-            const currentMinutes = now.getHours() * 60 + now.getMinutes();
-            return slotMinutes < currentMinutes;
+            const slotDateTime = getSlotDateTime(dateStr, slotIdx);
+            return slotDateTime < now;
         }
 
         function switchPage(page) {
@@ -1129,16 +1189,38 @@
         }
 
         function setupDates() {
-            const today = new Date();
-            const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-            const nextDay = new Date(today); nextDay.setDate(nextDay.getDate() + 2);
+            const baseOp = getBaseOperationalDate();
+            const yesterday = new Date(baseOp); yesterday.setDate(yesterday.getDate() - 1);
+            const today = new Date(baseOp);
+            const tomorrow = new Date(baseOp); tomorrow.setDate(tomorrow.getDate() + 1);
+            const nextDay = new Date(baseOp); nextDay.setDate(nextDay.getDate() + 2);
 
             if (document.getElementById('selected-date')) document.getElementById('selected-date').value = state.selectedDate;
+            if (document.getElementById('label-date-yesterday')) document.getElementById('label-date-yesterday').innerText = formatDateShort(yesterday);
             if (document.getElementById('label-date-today')) document.getElementById('label-date-today').innerText = formatDateShort(today);
             if (document.getElementById('label-date-tomorrow')) document.getElementById('label-date-tomorrow').innerText = formatDateShort(tomorrow);
             if (document.getElementById('label-date-next')) document.getElementById('label-date-next').innerText = formatDateShort(nextDay);
 
+            updateDateShortcutButtons();
             updateHeaderRateDisplay();
+        }
+
+        function updateDateShortcutButtons() {
+            const baseOp = getBaseOperationalDate();
+            const offsets = { yesterday: -1, today: 0, tomorrow: 1, next: 2 };
+            
+            Object.keys(offsets).forEach(k => {
+                const target = new Date(baseOp);
+                target.setDate(target.getDate() + offsets[k]);
+                const iso = getLocalDateISO(target);
+                const btn = document.getElementById('btn-date-' + k);
+                if (!btn) return;
+                if (iso === state.selectedDate) {
+                    btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-between bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-sm";
+                } else {
+                    btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700";
+                }
+            });
         }
 
         function updateHeaderRateDisplay() {
@@ -1153,19 +1235,89 @@
             return dateObj.toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
         }
 
+        function stepDate(daysOffset) {
+            const curr = new Date(state.selectedDate + 'T00:00:00');
+            curr.setDate(curr.getDate() + daysOffset);
+            state.selectedDate = getLocalDateISO(curr);
+            if (document.getElementById('selected-date')) document.getElementById('selected-date').value = state.selectedDate;
+            handleDateChange(state.selectedDate);
+        }
+
         function jumpToDate(offsetDays) {
-            const d = new Date();
-            d.setDate(d.getDate() + offsetDays);
-            state.selectedDate = d.toISOString().split('T')[0];
+            const baseOp = getBaseOperationalDate();
+            baseOp.setDate(baseOp.getDate() + offsetDays);
+            state.selectedDate = getLocalDateISO(baseOp);
             if (document.getElementById('selected-date')) document.getElementById('selected-date').value = state.selectedDate;
             handleDateChange(state.selectedDate);
         }
 
         function handleDateChange(dateStr) {
             state.selectedDate = dateStr;
+            updateDateShortcutButtons();
             updateHeaderRateDisplay();
             renderTimeline();
             renderOrdersPage();
+        }
+
+        function calculateBookingTotals(booking) {
+            if (!booking) {
+                return { tableFee: 0, fbFee: 0, subtotal: 0, googleDiscountAmt: 0, autoDiscountAmt: 0, autoDiscountLabel: "Tidak ada", totalDiscount: 0, bookingFee: 0, finalTotal: 0 };
+            }
+
+            const durationHrs = (booking.durationSlots || 4) * 0.25;
+            const rate = booking.hourlyRate || getHourlyRateForDate(booking.date);
+            const tableFee = durationHrs * rate;
+            const items = booking.items || [];
+            const fbFee = items.reduce((sum, item) => sum + ((item.price || 0) * (item.qty || 1)), 0);
+            const subtotal = tableFee + fbFee;
+
+            let googleDiscountAmt = 0;
+            if (state.settings.googleReviewDiscountEnabled && booking.googleReviewDiscount) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
+            }
+
+            let autoDiscountAmt = 0;
+            let autoDiscountLabel = "Tidak ada";
+            const dayKey = getDayKey(booking.date);
+            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+
+            const matchedRule = (state.discountRules || [])
+                .filter(r => r.enabled && durationHrs >= r.minHours)
+                .filter(r => {
+                    if (r.days === 'ALL') return true;
+                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
+                    if (r.days === 'WEEKEND' && isWeekend) return true;
+                    return false;
+                })
+                .sort((a, b) => b.minHours - a.minHours)[0];
+
+            if (matchedRule) {
+                if (matchedRule.type === 'PERCENT') {
+                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
+                    autoDiscountLabel = `${matchedRule.value}% (Durasi ≥ ${matchedRule.minHours} jam)`;
+                } else {
+                    autoDiscountAmt = matchedRule.value;
+                    autoDiscountLabel = `${formatIDR(matchedRule.value)} (Durasi ≥ ${matchedRule.minHours} jam)`;
+                }
+            }
+
+            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
+            const bookingFee = booking.bookingFee || 0;
+            const finalTotal = Math.max(0, subtotal - totalDiscount - bookingFee);
+
+            return {
+                durationHrs,
+                rate,
+                tableFee,
+                fbFee,
+                subtotal,
+                googleDiscountAmt,
+                autoDiscountAmt,
+                autoDiscountLabel,
+                totalDiscount,
+                bookingFee,
+                finalTotal
+            };
         }
 
         function renderTimeline() {
@@ -1234,11 +1386,15 @@
                             const badgeBg = isPaid || isArrived ? 'bg-white/20' : 'bg-amber-400/40';
                             const priceBg = isPaid || isArrived ? 'bg-black/20 text-white' : 'bg-amber-300/80 text-amber-950';
 
+                            // Tampilkan total Rupiah live akurat (termasuk jam tambahan & F&B)
+                            const liveTotals = calculateBookingTotals(activeBooking);
+                            const currentDisplayTotal = isPaid ? (activeBooking.finalTotal || liveTotals.finalTotal) : liveTotals.finalTotal;
+
                             slotCell.innerHTML = `
                                 <div onclick="openManageModal('${activeBooking.id}')" class="${bgStyle} h-full border rounded-xl p-2 flex flex-col justify-between hover:scale-[0.99] transition overflow-hidden">
                                     <div class="flex items-center justify-between text-xs font-bold gap-1">
                                         <span class="truncate max-w-[120px]"><i class="fa-solid fa-user mr-1 text-[10px]"></i>${activeBooking.name}</span>
-                                        <span class="${priceBg} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(activeBooking.finalTotal || activeBooking.totalPrice)}</span>
+                                        <span class="${priceBg} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(currentDisplayTotal)}</span>
                                     </div>
                                     <div class="flex items-center justify-between text-[11px] font-semibold opacity-95">
                                         <span>${startTimeStr} - ${endTimeStr}</span>
@@ -1424,6 +1580,9 @@
                 phone: phone,
                 startSlot: startSlot,
                 durationSlots: durationSlots,
+                initialDurationSlots: durationSlots,
+                extensions: [],
+                arrived: false,
                 hourlyRate: dayRate,
                 tableFee: tableFee,
                 bookingFee: bookingFee,
@@ -1433,8 +1592,6 @@
                 finalTotal: finalTotal,
                 status: "BOOKED",
                 notes: notes,
-                arrived: false,
-                arrivedTime: null,
                 createdTime: new Date().toISOString(),
                 completedOrCancelledTime: null
             };
@@ -1470,6 +1627,7 @@
             if (document.getElementById('modal-manage-base-price')) document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.tableFee);
 
             updateArrivalUI(booking);
+            updateExtendUI(booking);
 
             populateFBPicker();
             renderCurrentFBList();
@@ -1489,14 +1647,19 @@
 
             const isLocked = booking.status === 'COMPLETED' || booking.status === 'PAID';
 
-            if (chkGoogle) {
-                chkGoogle.disabled = isLocked;
-            }
+            if (chkGoogle) chkGoogle.disabled = isLocked;
             const discountSec = document.getElementById('section-discount-selection');
+            const extendSec = document.getElementById('section-extend-duration');
+            const arrivalSec = document.getElementById('section-arrival-indicator');
+
             if (isLocked) {
                 discountSec?.classList.add('opacity-75', 'pointer-events-none');
+                extendSec?.classList.add('hidden');
+                arrivalSec?.classList.add('opacity-75', 'pointer-events-none');
             } else {
                 discountSec?.classList.remove('opacity-75', 'pointer-events-none');
+                extendSec?.classList.remove('hidden');
+                arrivalSec?.classList.remove('opacity-75', 'pointer-events-none');
             }
 
             recalculateManageSummary();
@@ -1526,6 +1689,196 @@
             document.getElementById('modal-manage-booking')?.classList.remove('hidden');
         }
 
+        function updateArrivalUI(booking) {
+            const btn = document.getElementById('btn-toggle-arrival');
+            const lbl = document.getElementById('btn-toggle-arrival-label');
+            const desc = document.getElementById('modal-arrival-desc');
+            if (!btn || !lbl) return;
+
+            if (booking.arrived) {
+                btn.className = "px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm bg-blue-600 hover:bg-blue-700 text-white";
+                lbl.innerText = "Sudah Datang (Hadir)";
+                if (desc) desc.innerText = "Tamu sedang bermain di meja ini (Warna Biru di Jadwal).";
+            } else {
+                btn.className = "px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300";
+                lbl.innerText = "Tandai Sudah Datang";
+                if (desc) desc.innerText = "Klik jika pelanggan sudah tiba di meja.";
+            }
+        }
+
+        function toggleActiveBookingArrival() {
+            if (!state.activeBookingId) return;
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            booking.arrived = !booking.arrived;
+            saveCloudBooking(booking);
+            updateArrivalUI(booking);
+            renderTimeline();
+
+            if (booking.arrived) {
+                showCustomToast(`Meja ${booking.table} ditandai SUDAH DATANG (Warna Biru).`, "success");
+            } else {
+                showCustomToast(`Status kehadiran Meja ${booking.table} dikembalikan ke Booking.`, "info");
+            }
+        }
+
+        function updateExtendUI(booking) {
+            const currentEndSlot = booking.startSlot + booking.durationSlots;
+            const currentEndStr = slotIndexToTime(currentEndSlot);
+            if (document.getElementById('modal-extend-current-end')) {
+                document.getElementById('modal-extend-current-end').innerText = `Selesai: ${currentEndStr}`;
+            }
+
+            // Cari batas ketersediaan meja sebelum booking berikutnya atau jam 02:00
+            const nextBooking = state.bookings
+                .filter(b => b.date === booking.date && b.table === booking.table && b.id !== booking.id && b.status !== "CANCELLED")
+                .filter(b => b.startSlot >= currentEndSlot)
+                .sort((a, b) => a.startSlot - b.startSlot)[0];
+
+            const maxSlotBoundary = nextBooking ? nextBooking.startSlot : TOTAL_SLOTS;
+            const availableSlots = maxSlotBoundary - currentEndSlot;
+
+            const selectElem = document.getElementById('modal-extend-hours-select');
+            const formRow = document.getElementById('modal-extend-form-row');
+            const statusMsg = document.getElementById('modal-extend-status-msg');
+
+            if (!selectElem || !formRow || !statusMsg) return;
+            selectElem.innerHTML = '';
+
+            if (availableSlots < 2) {
+                formRow.classList.add('hidden');
+                if (nextBooking) {
+                    statusMsg.innerHTML = `<span class="text-rose-600 font-bold"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Tidak dapat menambah jam: Meja sudah dibooking oleh ${nextBooking.name} pada jam ${slotIndexToTime(nextBooking.startSlot)}.</span>`;
+                } else {
+                    statusMsg.innerHTML = `<span class="text-amber-700 font-bold"><i class="fa-solid fa-clock mr-1"></i> Tidak dapat menambah jam: Meja sudah mencapai batas tutup operasional (02:00 AM).</span>`;
+                }
+            } else {
+                formRow.classList.remove('hidden');
+                const maxHoursAvailable = availableSlots * 0.25;
+                statusMsg.innerHTML = `Tersedia waktu tambahan hingga <strong class="text-emerald-700">${maxHoursAvailable} jam lagi</strong> ${nextBooking ? '(sebelum kedatangan ' + nextBooking.name + ' jam ' + slotIndexToTime(nextBooking.startSlot) + ')' : '(sampai jam tutup 02:00 AM)'}.`;
+
+                const maxSlotsToAdd = Math.min(availableSlots, 16); // Maksimal pilihan +4 jam sekaligus
+                for (let s = 2; s <= maxSlotsToAdd; s += 2) {
+                    const hrs = s * 0.25;
+                    const opt = document.createElement('option');
+                    opt.value = s;
+                    const rate = booking.hourlyRate || getHourlyRateForDate(booking.date);
+                    opt.innerText = `+${hrs} Jam (+${formatIDR(hrs * rate)})`;
+                    selectElem.appendChild(opt);
+                }
+            }
+
+            const revertContainer = document.getElementById('modal-extend-revert-container');
+            const historyLabel = document.getElementById('modal-extend-history-label');
+            const hasExtended = (booking.extensions && booking.extensions.length > 0) || (booking.initialDurationSlots && booking.durationSlots > booking.initialDurationSlots);
+
+            if (revertContainer && historyLabel) {
+                if (hasExtended) {
+                    revertContainer.classList.remove('hidden');
+                    const addedHrs = (booking.durationSlots - (booking.initialDurationSlots || 4)) * 0.25;
+                    historyLabel.innerText = `Telah diperpanjang +${addedHrs} jam (Durasi awal: ${(booking.initialDurationSlots || 4) * 0.25}j)`;
+                } else {
+                    revertContainer.classList.add('hidden');
+                }
+            }
+        }
+
+        function previewExtendPrice() {
+            // Placeholder interaksi change dropdown
+        }
+
+        function executeExtendBooking() {
+            if (!state.activeBookingId) return;
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            const selectElem = document.getElementById('modal-extend-hours-select');
+            const slotsToAdd = parseInt(selectElem?.value || 0);
+            if (slotsToAdd <= 0) return;
+
+            const currentEndSlot = booking.startSlot + booking.durationSlots;
+            const newEndSlot = currentEndSlot + slotsToAdd;
+
+            if (newEndSlot > TOTAL_SLOTS) {
+                showCustomToast("Perpanjangan melebihi jam tutup operasional (02:00 AM).", "error");
+                return;
+            }
+
+            const hasConflict = state.bookings.some(b => 
+                b.date === booking.date && 
+                b.table === booking.table && 
+                b.id !== booking.id && 
+                b.status !== "CANCELLED" &&
+                b.startSlot < newEndSlot &&
+                (b.startSlot + b.durationSlots) > currentEndSlot
+            );
+
+            if (hasConflict) {
+                showCustomToast("Gagal menambah jam: Meja sudah memiliki booking lain pada jam tersebut.", "error");
+                updateExtendUI(booking);
+                return;
+            }
+
+            if (!booking.initialDurationSlots) {
+                booking.initialDurationSlots = booking.durationSlots;
+            }
+            if (!booking.extensions) {
+                booking.extensions = [];
+            }
+
+            const hoursToAdd = slotsToAdd * 0.25;
+            const rate = booking.hourlyRate || getHourlyRateForDate(booking.date);
+            const addedFee = hoursToAdd * rate;
+
+            booking.extensions.push({
+                slots: slotsToAdd,
+                hours: hoursToAdd,
+                fee: addedFee,
+                timestamp: new Date().toISOString()
+            });
+
+            // Perpanjang durasi dan hitung ulang total dalam 1 tagihan
+            booking.durationSlots += slotsToAdd;
+            booking.tableFee = (booking.durationSlots * 0.25) * rate;
+
+            recalculateManageSummary();
+            saveCloudBooking(booking);
+
+            openManageModal(booking.id);
+            renderTimeline();
+            showCustomToast(`Meja ${booking.table} berhasil diperpanjang +${hoursToAdd} jam (total ${booking.durationSlots * 0.25} jam)!`, "success");
+        }
+
+        function revertLastExtension() {
+            if (!state.activeBookingId) return;
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            let revertedHours = 0;
+            if (booking.extensions && booking.extensions.length > 0) {
+                const lastExt = booking.extensions.pop();
+                revertedHours = lastExt.hours;
+                booking.durationSlots = Math.max(booking.initialDurationSlots || 4, booking.durationSlots - lastExt.slots);
+            } else if (booking.initialDurationSlots && booking.durationSlots > booking.initialDurationSlots) {
+                revertedHours = (booking.durationSlots - booking.initialDurationSlots) * 0.25;
+                booking.durationSlots = booking.initialDurationSlots;
+                booking.extensions = [];
+            } else {
+                return;
+            }
+
+            const rate = booking.hourlyRate || getHourlyRateForDate(booking.date);
+            booking.tableFee = (booking.durationSlots * 0.25) * rate;
+
+            recalculateManageSummary();
+            saveCloudBooking(booking);
+
+            openManageModal(booking.id);
+            renderTimeline();
+            showCustomToast(`Perpanjangan durasi ${revertedHours} jam berhasil dibatalkan. Durasi kembali ke ${booking.durationSlots * 0.25} jam.`, "info");
+        }
+
         function populateFBPicker() {
             const picker = document.getElementById('modal-fb-picker');
             if (!picker) return;
@@ -1536,59 +1889,6 @@
                 opt.innerText = `${p.name} - ${formatIDR(p.price)}`;
                 picker.appendChild(opt);
             });
-        }
-
-        function updateArrivalUI(booking) {
-            const banner = document.getElementById('modal-arrival-banner');
-            const icon = document.getElementById('modal-arrival-icon');
-            const title = document.getElementById('modal-arrival-title');
-            const sub = document.getElementById('modal-arrival-sub');
-            const btn = document.getElementById('btn-toggle-arrival');
-            const btnText = document.getElementById('btn-toggle-arrival-text');
-
-            if (!banner || !btn) return;
-
-            if (booking.arrived) {
-                banner.className = "border rounded-2xl p-3.5 flex items-center justify-between transition bg-blue-50 border-blue-200 text-blue-900";
-                icon.className = "w-9 h-9 rounded-xl flex items-center justify-center text-sm bg-blue-600 text-white shadow-sm";
-                title.className = "text-xs font-black block text-blue-900";
-                title.innerText = "Pelanggan Sudah Datang (Warna Biru Aktif)";
-                sub.className = "text-[11px] text-blue-700";
-                sub.innerText = booking.arrivedTime ? `Check-in pada: ${formatDateTime(booking.arrivedTime)}` : "Pelanggan sedang berada di meja";
-
-                btn.className = "px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm bg-slate-200 hover:bg-slate-300 text-slate-700 active:scale-95";
-                btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i><span>Batalkan Hadir</span>`;
-            } else {
-                banner.className = "border rounded-2xl p-3.5 flex items-center justify-between transition bg-slate-50 border-slate-200 text-slate-800";
-                icon.className = "w-9 h-9 rounded-xl flex items-center justify-center text-sm bg-slate-200 text-slate-500";
-                title.className = "text-xs font-extrabold block text-slate-800";
-                title.innerText = "Status: Belum Datang";
-                sub.className = "text-[11px] text-slate-500";
-                sub.innerText = "Tandai jika pelanggan sudah berada di meja";
-
-                btn.className = "px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm bg-blue-600 hover:bg-blue-700 text-white active:scale-95 shadow-blue-600/20";
-                btn.innerHTML = `<i class="fa-solid fa-check"></i><span>Tandai Sudah Datang</span>`;
-            }
-        }
-
-        function toggleActiveBookingArrival() {
-            if (!state.activeBookingId) return;
-            const booking = state.bookings.find(b => b.id === state.activeBookingId);
-            if (!booking) return;
-
-            booking.arrived = !booking.arrived;
-            booking.arrivedTime = booking.arrived ? new Date().toISOString() : null;
-
-            saveCloudBooking(booking);
-            updateArrivalUI(booking);
-            renderTimeline();
-            renderOrdersPage();
-
-            if (booking.arrived) {
-                showCustomToast(`Meja ${booking.table} (${booking.name}) ditandai SUDAH DATANG (Warna Biru)!`, "success");
-            } else {
-                showCustomToast(`Status kedatangan Meja ${booking.table} dikembalikan ke Belum Datang.`, "info");
-            }
         }
 
         function addSelectedFBItem() {
@@ -1617,11 +1917,12 @@
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (booking) {
                 booking.items = [...state.currentFBItems];
+                recalculateManageSummary();
                 saveCloudBooking(booking);
+                renderTimeline();
             }
 
             renderCurrentFBList();
-            recalculateManageSummary();
             renderOrdersPage();
             updateOrderBadges();
             showCustomToast(`Menu "${prod.name}" tersimpan di pesanan meja.`, "success");
@@ -1633,11 +1934,12 @@
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (booking) {
                 booking.items = [...state.currentFBItems];
+                recalculateManageSummary();
                 saveCloudBooking(booking);
+                renderTimeline();
             }
 
             renderCurrentFBList();
-            recalculateManageSummary();
             renderOrdersPage();
             updateOrderBadges();
             showCustomToast("Item F&B dihapus dari pesanan.", "info");
@@ -1697,58 +1999,38 @@
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (!booking) return;
 
-            const tableFee = booking.tableFee || 0;
-            const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const subtotal = tableFee + fbFee;
-
-            let googleDiscountAmt = 0;
-            const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
-            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
-                googleDiscountAmt = Math.round(subtotal * 0.05);
+            const chkGoogle = document.getElementById('modal-chk-google-discount');
+            if (chkGoogle) {
+                booking.googleReviewDiscount = !!chkGoogle.checked;
             }
 
-            let autoDiscountAmt = 0;
-            let autoDiscountLabel = "Tidak ada";
-            const durationHrs = booking.durationSlots * 0.25;
-            const dayKey = getDayKey(booking.date);
-            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+            const totals = calculateBookingTotals(booking);
 
-            const matchedRule = state.discountRules
-                .filter(r => r.enabled && durationHrs >= r.minHours)
-                .filter(r => {
-                    if (r.days === 'ALL') return true;
-                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
-                    if (r.days === 'WEEKEND' && isWeekend) return true;
-                    return false;
-                })
-                .sort((a, b) => b.minHours - a.minHours)[0];
+            booking.tableFee = totals.tableFee;
+            booking.googleDiscountAmount = totals.googleDiscountAmt;
+            booking.autoDiscountAmount = totals.autoDiscountAmt;
+            booking.autoDiscountLabel = totals.autoDiscountLabel;
+            booking.totalDiscount = totals.totalDiscount;
+            booking.finalTotal = totals.finalTotal;
 
-            if (matchedRule) {
-                if (matchedRule.type === 'PERCENT') {
-                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
-                    autoDiscountLabel = `${matchedRule.value}% (Durasi ≥ ${matchedRule.minHours} jam)`;
-                } else {
-                    autoDiscountAmt = matchedRule.value;
-                    autoDiscountLabel = `${formatIDR(matchedRule.value)} (Durasi ≥ ${matchedRule.minHours} jam)`;
-                }
+            if (document.getElementById('modal-manage-duration')) {
+                document.getElementById('modal-manage-duration').innerText = `${totals.durationHrs} Jam @ ${formatIDR(totals.rate)}/jam`;
             }
-
+            if (document.getElementById('modal-manage-base-price')) {
+                document.getElementById('modal-manage-base-price').innerText = formatIDR(totals.tableFee);
+            }
             if (document.getElementById('value-auto-discount-rule')) {
-                document.getElementById('value-auto-discount-rule').innerText = autoDiscountLabel;
+                document.getElementById('value-auto-discount-rule').innerText = totals.autoDiscountLabel;
             }
 
-            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
-            const bookingFee = booking.bookingFee || 0;
-            const finalTotal = Math.max(0, subtotal - totalDiscount - bookingFee);
-
-            if (document.getElementById('summary-table-fee')) document.getElementById('summary-table-fee').innerText = formatIDR(tableFee);
-            if (document.getElementById('summary-fb-fee')) document.getElementById('summary-fb-fee').innerText = formatIDR(fbFee);
+            if (document.getElementById('summary-table-fee')) document.getElementById('summary-table-fee').innerText = formatIDR(totals.tableFee);
+            if (document.getElementById('summary-fb-fee')) document.getElementById('summary-fb-fee').innerText = formatIDR(totals.fbFee);
             
             const rowGoogle = document.getElementById('row-discount-google');
             if (rowGoogle) {
-                if (googleDiscountAmt > 0) {
+                if (totals.googleDiscountAmt > 0) {
                     rowGoogle.classList.remove('hidden');
-                    document.getElementById('summary-google-discount').innerText = `- ${formatIDR(googleDiscountAmt)}`;
+                    document.getElementById('summary-google-discount').innerText = `- ${formatIDR(totals.googleDiscountAmt)}`;
                 } else {
                     rowGoogle.classList.add('hidden');
                 }
@@ -1756,28 +2038,28 @@
 
             const rowAuto = document.getElementById('row-discount-auto');
             if (rowAuto) {
-                if (autoDiscountAmt > 0) {
+                if (totals.autoDiscountAmt > 0) {
                     rowAuto.classList.remove('hidden');
-                    document.getElementById('label-summary-auto-discount').innerText = `• Diskon Durasi (${autoDiscountLabel}):`;
-                    document.getElementById('summary-auto-discount').innerText = `- ${formatIDR(autoDiscountAmt)}`;
+                    document.getElementById('label-summary-auto-discount').innerText = `• Diskon Durasi (${totals.autoDiscountLabel}):`;
+                    document.getElementById('summary-auto-discount').innerText = `- ${formatIDR(totals.autoDiscountAmt)}`;
                 } else {
                     rowAuto.classList.add('hidden');
                 }
             }
 
-            if (document.getElementById('summary-discount-fee')) document.getElementById('summary-discount-fee').innerText = `- ${formatIDR(totalDiscount)}`;
+            if (document.getElementById('summary-discount-fee')) document.getElementById('summary-discount-fee').innerText = `- ${formatIDR(totals.totalDiscount)}`;
             
             const rowBf = document.getElementById('row-booking-fee');
             if (rowBf) {
-                if (bookingFee > 0) {
+                if (totals.bookingFee > 0) {
                     rowBf.classList.remove('hidden');
-                    document.getElementById('summary-booking-fee').innerText = `- ${formatIDR(bookingFee)}`;
+                    document.getElementById('summary-booking-fee').innerText = `- ${formatIDR(totals.bookingFee)}`;
                 } else {
                     rowBf.classList.add('hidden');
                 }
             }
 
-            if (document.getElementById('summary-final-total')) document.getElementById('summary-final-total').innerText = formatIDR(finalTotal);
+            if (document.getElementById('summary-final-total')) document.getElementById('summary-final-total').innerText = formatIDR(totals.finalTotal);
         }
 
         function closeManageModal() {
@@ -1792,54 +2074,19 @@
             const booking = state.bookings.find(b => b.id === state.activeBookingId);
             if (!booking) return;
 
-            const tableFee = booking.tableFee || 0;
-            const fbFee = state.currentFBItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-            const subtotal = tableFee + fbFee;
-
-            let googleDiscountAmt = 0;
             const isGoogleChecked = document.getElementById('modal-chk-google-discount')?.checked;
-            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
-                googleDiscountAmt = Math.round(subtotal * 0.05);
-            }
-
-            let autoDiscountAmt = 0;
-            let autoDiscountLabel = "Tidak ada";
-            const durationHrs = booking.durationSlots * 0.25;
-            const dayKey = getDayKey(booking.date);
-            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
-
-            const matchedRule = state.discountRules
-                .filter(r => r.enabled && durationHrs >= r.minHours)
-                .filter(r => {
-                    if (r.days === 'ALL') return true;
-                    if (r.days === 'WEEKDAY' && !isWeekend) return true;
-                    if (r.days === 'WEEKEND' && isWeekend) return true;
-                    return false;
-                })
-                .sort((a, b) => b.minHours - a.minHours)[0];
-
-            if (matchedRule) {
-                if (matchedRule.type === 'PERCENT') {
-                    autoDiscountAmt = Math.round(subtotal * (matchedRule.value / 100));
-                    autoDiscountLabel = `${matchedRule.value}% (Durasi ≥ ${matchedRule.minHours} jam)`;
-                } else {
-                    autoDiscountAmt = matchedRule.value;
-                    autoDiscountLabel = `${formatIDR(matchedRule.value)} (Durasi ≥ ${matchedRule.minHours} jam)`;
-                }
-            }
-
-            const totalDiscount = googleDiscountAmt + autoDiscountAmt;
-            const bookingFee = booking.bookingFee || 0;
-            const finalTotal = Math.max(0, subtotal - totalDiscount - bookingFee);
-
-            booking.items = [...state.currentFBItems];
             booking.googleReviewDiscount = !!isGoogleChecked;
-            booking.googleDiscountAmount = googleDiscountAmt;
-            booking.autoDiscountAmount = autoDiscountAmt;
-            booking.autoDiscountLabel = autoDiscountLabel;
-            booking.totalDiscount = totalDiscount;
-            booking.bookingFee = bookingFee;
-            booking.finalTotal = finalTotal;
+            booking.items = [...state.currentFBItems];
+
+            const totals = calculateBookingTotals(booking);
+
+            booking.tableFee = totals.tableFee;
+            booking.googleDiscountAmount = totals.googleDiscountAmt;
+            booking.autoDiscountAmount = totals.autoDiscountAmt;
+            booking.autoDiscountLabel = totals.autoDiscountLabel;
+            booking.totalDiscount = totals.totalDiscount;
+            booking.bookingFee = totals.bookingFee;
+            booking.finalTotal = totals.finalTotal;
             booking.status = "COMPLETED";
             booking.completedOrCancelledTime = new Date().toISOString();
 
@@ -1849,7 +2096,7 @@
             renderTransactions();
             renderOrdersPage();
             updateOrderBadges();
-            showCustomToast(`Pembayaran dikonfirmasi! ${formatIDR(finalTotal)} telah dicatat Lunas.`, "success");
+            showCustomToast(`Pembayaran dikonfirmasi! ${formatIDR(totals.finalTotal)} telah dicatat Lunas.`, "success");
         }
 
         function openPinModalForCancel() {
@@ -1912,26 +2159,22 @@
             printThermalReceipt(booking);
         }
 
-        /* 
-           FUNGSI CETAK LANGSUNG:
-           Menggunakan pendekatan fluid 100% fit-to-paper tanpa zoom hack dan tanpa toast/popup bocor.
-        */
         function printThermalReceipt(booking) {
             const printContainer = document.getElementById('thermal-print-direct-container');
             if (!printContainer) return;
 
-            // Bersihkan semua balon toast yang sedang melayang di layar sebelum print
+            // Bersihkan semua balon toast aktif agar tidak bocor ke cetakan
             document.querySelectorAll('div.animate-bounce').forEach(el => el.remove());
 
-            // Masukkan struktur HTML struk termal 8 Bamboo Model 1
+            // Masukkan DOM struk termal besar & jelas
             printContainer.innerHTML = buildReceiptDOMString(booking);
 
-            // Jeda 50ms langsung panggil print tanpa memicu toast apa pun
             setTimeout(() => {
                 try {
                     window.print();
                 } catch (err) {
                     console.error("Gagal memanggil fungsi window.print():", err);
+                    showCustomToast("Gagal membuka dialog printer.", "error");
                 }
             }, 50);
         }
@@ -1948,119 +2191,119 @@
             const autoDiscount = booking.autoDiscountAmount || 0;
             const totalDiscount = booking.totalDiscount || (googleDiscount + autoDiscount);
             const subtotal = tableFee + items.reduce((s, i) => s + (i.price * i.qty), 0);
-            const finalTotal = booking.finalTotal || Math.max(0, subtotal - totalDiscount - bookingFee);
+            const finalTotal = booking.finalTotal !== undefined ? booking.finalTotal : Math.max(0, subtotal - totalDiscount - bookingFee);
 
             let itemsHtml = '';
             if (items.length > 0) {
                 itemsHtml = items.map(item => `
-                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 8px; font-size: 22px;">
-                        <span style="font-weight: 900; max-width: 65%; word-break: break-word; color: #000000;">${item.name}</span>
-                        <span style="font-family: monospace; font-weight: 900; white-space: nowrap; color: #000000;">${formatIDR(item.price * item.qty)}</span>
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 5px; font-size: 22px; font-weight: 900;">
+                        <span style="max-width: 65%; word-break: break-word;">${item.name}</span>
+                        <span style="font-family: monospace; white-space: nowrap;">${formatIDR(item.price * item.qty)}</span>
                     </div>
-                    <div style="font-size: 18px; font-weight: 700; color: #000000; margin-bottom: 6px;">${item.qty} × ${formatIDR(item.price)}</div>
+                    <div style="font-size: 18px; font-weight: 700; color: #000000; margin-bottom: 4px;">${item.qty} × ${formatIDR(item.price)}</div>
                 `).join('');
             }
 
             let discountHtml = '';
             if (googleDiscount > 0) {
                 discountHtml += `
-                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: #000000; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-bottom: 4px;">
                         <span>Diskon Ulasan (5%):</span>
-                        <span style="font-family: monospace; font-weight: 900; white-space: nowrap;">-${formatIDR(googleDiscount)}</span>
+                        <span style="font-family: monospace; white-space: nowrap;">-${formatIDR(googleDiscount)}</span>
                     </div>
                 `;
             }
             if (autoDiscount > 0) {
                 discountHtml += `
-                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: #000000; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-bottom: 4px;">
                         <span>Diskon Durasi:</span>
-                        <span style="font-family: monospace; font-weight: 900; white-space: nowrap;">-${formatIDR(autoDiscount)}</span>
+                        <span style="font-family: monospace; white-space: nowrap;">-${formatIDR(autoDiscount)}</span>
                     </div>
                 `;
             }
             if (bookingFee > 0) {
                 discountHtml += `
-                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: #000000; margin-bottom: 6px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-bottom: 4px;">
                         <span>Booking Fee (DP):</span>
-                        <span style="font-family: monospace; font-weight: 900; white-space: nowrap;">-${formatIDR(bookingFee)}</span>
+                        <span style="font-family: monospace; white-space: nowrap;">-${formatIDR(bookingFee)}</span>
                     </div>
                 `;
             }
 
             return `
-                <div style="text-align: center; margin-bottom: 10px;">
-                    <div style="font-size: 32px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: #000000;">🀄 8 BAMBOO 🀄</div>
-                    <div style="font-size: 17.5px; font-weight: 700; color: #000000; line-height: 1.35; margin-top: 5px;">
+                <div style="text-align: center; margin-bottom: 8px;">
+                    <div style="font-size: 32px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase;">🀄 8 BAMBOO 🀄</div>
+                    <div style="font-size: 16.5px; font-weight: 700; color: #000000; line-height: 1.35; margin-top: 4px;">
                         Ruko South Sorrento No.25, Cihuni, Kec. Pagedangan,<br>
                         Kabupaten Tangerang, Banten 15332
                     </div>
-                    <div style="font-size: 16.5px; font-weight: 700; color: #000000; margin-top: 4px;">Jam Operasional: 10:00 - 02:00 WIB</div>
+                    <div style="font-size: 16px; font-weight: 700; color: #000000; margin-top: 3px;">Jam Operasional: 10:00 - 02:00 WIB</div>
                 </div>
 
-                <div style="border-top: 2px dashed #000000; margin: 10px 0;"></div>
+                <div style="border-top: 2px dashed #000000; margin: 8px 0;"></div>
 
-                <div style="display: flex; justify-content: space-between; font-size: 20.5px; margin-bottom: 6px; color: #000000;">
-                    <span>No. Struk:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">No. Struk:</span>
                     <span style="font-weight: 900; font-family: monospace;">#${booking.id}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 6px; color: #000000;">
-                    <span>Waktu Bayar:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Waktu Bayar:</span>
                     <span style="font-family: monospace; font-weight: 700;">${formatDateTime(booking.completedOrCancelledTime || new Date().toISOString())}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20.5px; margin-bottom: 6px; color: #000000;">
-                    <span>Pelanggan:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Pelanggan:</span>
                     <span style="font-weight: 900;">${booking.name}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 6px; color: #000000;">
-                    <span>Nomor HP:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Nomor HP:</span>
                     <span style="font-family: monospace; font-weight: 700;">${booking.phone}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 22px; margin-bottom: 6px; color: #000000;">
-                    <span>Meja:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Meja:</span>
                     <span style="font-weight: 900; font-size: 24px;">MEJA ${booking.table}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 6px; color: #000000;">
-                    <span>Jadwal Main:</span>
-                    <span style="font-weight: 700;">${booking.date}</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Jadwal Main:</span>
+                    <span style="font-weight: 800;">${booking.date}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 6px; color: #000000;">
-                    <span>Waktu:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Waktu:</span>
                     <span style="font-family: monospace; font-weight: 800;">${startStr} - ${endStr}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20.5px; margin-bottom: 6px; color: #000000;">
-                    <span>Durasi:</span>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Durasi:</span>
                     <span style="font-weight: 900;">${durationHrs} Jam</span>
                 </div>
 
-                <div style="border-top: 2px dashed #000000; margin: 10px 0;"></div>
+                <div style="border-top: 2px dashed #000000; margin: 8px 0;"></div>
 
-                <div style="font-size: 19px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Rincian Item</div>
+                <div style="font-size: 19px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Rincian Item</div>
 
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; font-size: 22px;">
-                    <span style="font-weight: 900; color: #000000;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
-                    <span style="font-family: monospace; font-weight: 900; white-space: nowrap; color: #000000;">${formatIDR(tableFee)}</span>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; font-size: 22px; font-weight: 900;">
+                    <span>Sewa Meja ${booking.table} (${durationHrs}j)</span>
+                    <span style="font-family: monospace; white-space: nowrap;">${formatIDR(tableFee)}</span>
                 </div>
-                <div style="font-size: 18px; font-weight: 700; color: #000000; margin-bottom: 6px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
+                <div style="font-size: 18px; font-weight: 700; color: #000000; margin-bottom: 4px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
 
                 ${itemsHtml}
 
-                <div style="border-top: 2px dashed #000000; margin: 10px 0;"></div>
+                <div style="border-top: 2px dashed #000000; margin: 8px 0;"></div>
 
-                <div style="display: flex; justify-content: space-between; font-size: 20.5px; font-weight: 700; color: #000000; margin-bottom: 6px;">
+                <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 800; color: #000000; margin-bottom: 4px;">
                     <span>Subtotal:</span>
-                    <span style="font-family: monospace; font-weight: 900;">${formatIDR(subtotal)}</span>
+                    <span style="font-family: monospace;">${formatIDR(subtotal)}</span>
                 </div>
 
                 ${discountHtml}
 
-                <div style="border-top: 2.5px solid #000000; margin: 12px 0 10px 0;"></div>
+                <div style="border-top: 2.5px solid #000000; margin: 10px 0 8px 0;"></div>
 
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 23px; font-weight: 900; text-transform: uppercase; color: #000000;">TOTAL AKHIR:</span>
-                    <span style="font-family: monospace; font-size: 32px; font-weight: 900; color: #000000;">${formatIDR(finalTotal)}</span>
+                    <span style="font-size: 23px; font-weight: 900; text-transform: uppercase;">TOTAL AKHIR:</span>
+                    <span style="font-family: monospace; font-size: 32px; font-weight: 900;">${formatIDR(finalTotal)}</span>
                 </div>
 
-                <div style="font-size: 17px; text-align: center; margin-top: 14px; padding-top: 12px; border-top: 2px dashed #000000; color: #000000; line-height: 1.45; font-weight: 800;">
+                <div style="font-size: 17.5px; font-weight: 700; text-align: center; margin-top: 12px; padding-top: 8px; border-top: 2px dashed #000000; color: #000000; line-height: 1.35;">
                     Terima kasih atas kunjungan Anda di 8 Bamboo!<br>
                     Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄
                 </div>
