@@ -183,6 +183,10 @@
                         <span class="text-slate-700 font-semibold">Dibooking (Belum Bayar)</span>
                     </div>
                     <div class="flex items-center gap-2">
+                        <span class="w-3.5 h-3.5 rounded-md bg-blue-600 border border-blue-500"></span>
+                        <span class="text-slate-700 font-semibold">Sudah Datang / Main</span>
+                    </div>
+                    <div class="flex items-center gap-2">
                         <span class="w-3.5 h-3.5 rounded-md bg-emerald-600 border border-emerald-500"></span>
                         <span class="text-slate-700 font-semibold">Selesai / Lunas</span>
                     </div>
@@ -667,6 +671,23 @@
                         <span class="text-slate-500 font-medium">Status:</span>
                         <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold" id="modal-manage-status">-</span>
                     </div>
+                </div>
+
+                <!-- Banner & Tombol Kehadiran (Check-in Biru) -->
+                <div id="modal-arrival-banner" class="border rounded-2xl p-3.5 flex items-center justify-between transition bg-slate-50 border-slate-200 text-slate-800">
+                    <div class="flex items-center gap-2.5">
+                        <div id="modal-arrival-icon" class="w-9 h-9 rounded-xl flex items-center justify-center text-sm bg-slate-200 text-slate-500">
+                            <i class="fa-solid fa-user-check"></i>
+                        </div>
+                        <div>
+                            <span id="modal-arrival-title" class="text-xs font-extrabold block text-slate-800">Status: Belum Datang</span>
+                            <span id="modal-arrival-sub" class="text-[11px] text-slate-500">Tandai jika pelanggan sudah berada di meja</span>
+                        </div>
+                    </div>
+                    <button type="button" id="btn-toggle-arrival" onclick="toggleActiveBookingArrival()" class="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm bg-blue-600 hover:bg-blue-700 text-white active:scale-95 shadow-blue-600/20">
+                        <i class="fa-solid fa-check"></i>
+                        <span id="btn-toggle-arrival-text">Tandai Sudah Datang</span>
+                    </button>
                 </div>
 
                 <!-- Bagian Tambah F&B -->
@@ -1198,22 +1219,30 @@
                             slotCell.className = "h-full p-1 cursor-pointer transition";
 
                             const isPaid = activeBooking.status === "COMPLETED" || activeBooking.status === "PAID";
+                            const isArrived = !!activeBooking.arrived;
+
                             const bgStyle = isPaid 
                                 ? "bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-500 text-white shadow-md" 
+                                : isArrived
+                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 border-blue-500 text-white shadow-md"
                                 : "bg-gradient-to-r from-amber-100 to-amber-200 border-amber-400 text-amber-900 shadow-sm";
 
                             const startTimeStr = slotIndexToTime(activeBooking.startSlot);
                             const endTimeStr = slotIndexToTime(activeBooking.startSlot + activeBooking.durationSlots);
 
+                            const badgeText = isPaid ? 'LUNAS' : isArrived ? 'SUDAH DATANG' : 'BOOKING';
+                            const badgeBg = isPaid || isArrived ? 'bg-white/20' : 'bg-amber-400/40';
+                            const priceBg = isPaid || isArrived ? 'bg-black/20 text-white' : 'bg-amber-300/80 text-amber-950';
+
                             slotCell.innerHTML = `
                                 <div onclick="openManageModal('${activeBooking.id}')" class="${bgStyle} h-full border rounded-xl p-2 flex flex-col justify-between hover:scale-[0.99] transition overflow-hidden">
                                     <div class="flex items-center justify-between text-xs font-bold gap-1">
                                         <span class="truncate max-w-[120px]"><i class="fa-solid fa-user mr-1 text-[10px]"></i>${activeBooking.name}</span>
-                                        <span class="${isPaid ? 'bg-black/20 text-white' : 'bg-amber-300/80 text-amber-950'} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(activeBooking.finalTotal || activeBooking.totalPrice)}</span>
+                                        <span class="${priceBg} px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0">${formatIDR(activeBooking.finalTotal || activeBooking.totalPrice)}</span>
                                     </div>
                                     <div class="flex items-center justify-between text-[11px] font-semibold opacity-95">
                                         <span>${startTimeStr} - ${endTimeStr}</span>
-                                        <span class="font-extrabold text-[9px] uppercase tracking-wider ${isPaid ? 'bg-white/20' : 'bg-amber-400/40'} px-1 rounded shrink-0">${isPaid ? 'LUNAS' : 'BOOKING'}</span>
+                                        <span class="font-extrabold text-[9px] uppercase tracking-wider ${badgeBg} px-1 rounded shrink-0">${badgeText}</span>
                                     </div>
                                 </div>
                             `;
@@ -1404,6 +1433,8 @@
                 finalTotal: finalTotal,
                 status: "BOOKED",
                 notes: notes,
+                arrived: false,
+                arrivedTime: null,
                 createdTime: new Date().toISOString(),
                 completedOrCancelledTime: null
             };
@@ -1437,6 +1468,8 @@
             if (document.getElementById('modal-manage-time')) document.getElementById('modal-manage-time').innerText = `${startStr} s/d ${endStr} (${booking.date})`;
             if (document.getElementById('modal-manage-duration')) document.getElementById('modal-manage-duration').innerText = `${durationHrs} Jam @ ${formatIDR(booking.hourlyRate)}/jam`;
             if (document.getElementById('modal-manage-base-price')) document.getElementById('modal-manage-base-price').innerText = formatIDR(booking.tableFee);
+
+            updateArrivalUI(booking);
 
             populateFBPicker();
             renderCurrentFBList();
@@ -1503,6 +1536,59 @@
                 opt.innerText = `${p.name} - ${formatIDR(p.price)}`;
                 picker.appendChild(opt);
             });
+        }
+
+        function updateArrivalUI(booking) {
+            const banner = document.getElementById('modal-arrival-banner');
+            const icon = document.getElementById('modal-arrival-icon');
+            const title = document.getElementById('modal-arrival-title');
+            const sub = document.getElementById('modal-arrival-sub');
+            const btn = document.getElementById('btn-toggle-arrival');
+            const btnText = document.getElementById('btn-toggle-arrival-text');
+
+            if (!banner || !btn) return;
+
+            if (booking.arrived) {
+                banner.className = "border rounded-2xl p-3.5 flex items-center justify-between transition bg-blue-50 border-blue-200 text-blue-900";
+                icon.className = "w-9 h-9 rounded-xl flex items-center justify-center text-sm bg-blue-600 text-white shadow-sm";
+                title.className = "text-xs font-black block text-blue-900";
+                title.innerText = "Pelanggan Sudah Datang (Warna Biru Aktif)";
+                sub.className = "text-[11px] text-blue-700";
+                sub.innerText = booking.arrivedTime ? `Check-in pada: ${formatDateTime(booking.arrivedTime)}` : "Pelanggan sedang berada di meja";
+
+                btn.className = "px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm bg-slate-200 hover:bg-slate-300 text-slate-700 active:scale-95";
+                btn.innerHTML = `<i class="fa-solid fa-rotate-left"></i><span>Batalkan Hadir</span>`;
+            } else {
+                banner.className = "border rounded-2xl p-3.5 flex items-center justify-between transition bg-slate-50 border-slate-200 text-slate-800";
+                icon.className = "w-9 h-9 rounded-xl flex items-center justify-center text-sm bg-slate-200 text-slate-500";
+                title.className = "text-xs font-extrabold block text-slate-800";
+                title.innerText = "Status: Belum Datang";
+                sub.className = "text-[11px] text-slate-500";
+                sub.innerText = "Tandai jika pelanggan sudah berada di meja";
+
+                btn.className = "px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition shadow-sm bg-blue-600 hover:bg-blue-700 text-white active:scale-95 shadow-blue-600/20";
+                btn.innerHTML = `<i class="fa-solid fa-check"></i><span>Tandai Sudah Datang</span>`;
+            }
+        }
+
+        function toggleActiveBookingArrival() {
+            if (!state.activeBookingId) return;
+            const booking = state.bookings.find(b => b.id === state.activeBookingId);
+            if (!booking) return;
+
+            booking.arrived = !booking.arrived;
+            booking.arrivedTime = booking.arrived ? new Date().toISOString() : null;
+
+            saveCloudBooking(booking);
+            updateArrivalUI(booking);
+            renderTimeline();
+            renderOrdersPage();
+
+            if (booking.arrived) {
+                showCustomToast(`Meja ${booking.table} (${booking.name}) ditandai SUDAH DATANG (Warna Biru)!`, "success");
+            } else {
+                showCustomToast(`Status kedatangan Meja ${booking.table} dikembalikan ke Belum Datang.`, "info");
+            }
         }
 
         function addSelectedFBItem() {
