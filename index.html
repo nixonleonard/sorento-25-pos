@@ -6,7 +6,7 @@
     <title>POS & Sistem Pemesanan Meja - Mahjong Club</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
+    <!-- FontAwesome Icons CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS for Excel Exporting -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -56,6 +56,7 @@
             backdrop-filter: blur(6px);
         }
 
+        /* ATURAN CETAK STRUK THERMAL FLUID 100% UNTUK PRINTER 58MM */
         @media print {
             @page {
                 size: auto;
@@ -135,7 +136,8 @@
                 <span class="text-[10px] text-slate-400 uppercase tracking-wider font-bold" id="current-day-label">Tarif Hari Ini</span>
                 <span class="text-sm font-extrabold text-emerald-600" id="current-rate-display">Rp 50.000 / jam</span>
             </div>
-            <button onclick="handleManualRefresh()" id="btn-header-refresh" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs px-3 py-2 rounded-xl font-bold border border-slate-300 transition flex items-center gap-1.5 shadow-sm" title="Segarkan Data & Jadwal">
+            <!-- TOMBOL REFRESH MEMUAT ULANG HALAMAN (PAGE RELOAD) -->
+            <button onclick="handleManualRefresh()" id="btn-header-refresh" class="bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 text-xs px-3 py-2 rounded-xl font-bold border border-slate-300 transition flex items-center gap-1.5 shadow-sm" title="Muat Ulang Halaman POS">
                 <i class="fa-solid fa-rotate text-emerald-600" id="header-refresh-icon"></i>
                 <span class="hidden sm:inline">Refresh</span>
             </button>
@@ -152,6 +154,7 @@
 
     <main class="flex-1 flex overflow-hidden relative">
 
+        <!-- HALAMAN 1: JADWAL MEJA (TIMELINE) -->
         <div id="page-book" class="flex-1 flex w-full h-full overflow-hidden">
             <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto">
                 <div>
@@ -248,6 +251,7 @@
             </section>
         </div>
 
+        <!-- HALAMAN 2: REKAP PESANAN F&B (LIVE KITCHEN & BAR) -->
         <div id="page-orders" class="flex-1 flex flex-col w-full h-full overflow-hidden bg-slate-50 hidden">
             <div class="bg-white border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 shadow-sm">
                 <div>
@@ -300,14 +304,24 @@
             </div>
         </div>
 
+        <!-- HALAMAN 3: RIWAYAT TRANSAKSI HARIAN -->
         <div id="page-trans" class="flex-1 flex w-full h-full overflow-hidden hidden">
-            <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0">
+            <aside class="w-64 bg-white border-r border-slate-200 p-4 flex flex-col gap-4 shrink-0 overflow-y-auto">
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Dari Tanggal</label>
                     <input type="date" id="trans-start-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm mb-3">
                     
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Sampai Tanggal</label>
-                    <input type="date" id="trans-end-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
+                    <input type="date" id="trans-end-date" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm mb-3">
+
+                    <!-- DROPDOWN FILTER STATUS TRANSAKSI -->
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Filter Status Transaksi</label>
+                    <select id="trans-filter-status" onchange="renderTransactions()" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition shadow-sm">
+                        <option value="ALL">Semua Status</option>
+                        <option value="COMPLETED">Selesai / Lunas</option>
+                        <option value="BOOKED">Dibooking (Belum Bayar)</option>
+                        <option value="CANCELLED">Dibatalkan</option>
+                    </select>
                 </div>
 
                 <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white border border-emerald-500 p-4 rounded-2xl flex flex-col gap-3 shadow-md">
@@ -373,6 +387,7 @@
             </section>
         </div>
 
+        <!-- HALAMAN 4: PENGATURAN PEMILIK -->
         <div id="page-setting" class="flex-1 flex w-full h-full overflow-y-auto bg-slate-50 p-6 hidden">
             <div class="max-w-3xl mx-auto w-full py-4">
                 <div id="setting-pin-lock" class="bg-white border border-slate-200 rounded-3xl p-8 shadow-xl text-center max-w-md mx-auto my-12">
@@ -552,6 +567,7 @@
 
     </main>
 
+    <!-- MODAL: BUAT BOOKING BARU -->
     <div id="modal-create-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between">
@@ -598,7 +614,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Durasi Main</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Durasi Main (1 s/d 5 Jam)</label>
                     <div class="grid grid-cols-2 gap-3 items-center">
                         <select id="form-duration-slots" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition"></select>
                         <span id="form-end-time-preview" class="text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200">Selesai: --:--</span>
@@ -636,6 +652,7 @@
         </div>
     </div>
 
+    <!-- MODAL: KELOLA / BAYAR / PERPANJANG BOOKING -->
     <div id="modal-manage-booking" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-auto max-h-[90vh] flex flex-col">
             <div class="bg-slate-50 px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0">
@@ -694,6 +711,7 @@
                     </div>
                 </div>
 
+                <!-- BAGIAN TAMBAH JAM MAIN (1 TAGIHAN / 1 BILL) DENGAN OPSI +0.5 JAM -->
                 <div id="section-extend-duration" class="border border-slate-200 rounded-2xl p-3.5 bg-slate-50 flex flex-col gap-2.5">
                     <div class="flex items-center justify-between">
                         <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -704,11 +722,12 @@
 
                     <div id="extend-controls-box" class="flex items-center gap-2">
                         <select id="extend-hours-select" onchange="previewExtendPrice()" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-emerald-500">
+                            <option value="2">+0.5 Jam (30m)</option>
                             <option value="4">+1.0 Jam</option>
+                            <option value="6">+1.5 Jam</option>
                             <option value="8">+2.0 Jam</option>
-                            <option value="12">+3.0 Jam</option>
                         </select>
-                        <span id="extend-price-preview" class="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-2 rounded-xl border border-emerald-200 shrink-0">+ Rp 50.000</span>
+                        <span id="extend-price-preview" class="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2.5 py-2 rounded-xl border border-emerald-200 shrink-0">+ Rp 25.000</span>
                         <button id="btn-apply-extend" onclick="executeExtendBooking()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2 rounded-xl text-xs transition shrink-0 shadow-sm">
                             <i class="fa-solid fa-plus mr-1"></i> Tambah Jam
                         </button>
@@ -827,7 +846,7 @@
     </div>
 
     <!-- MODAL KUNCI AKSES APLIKASI (PIN KASIR) -->
-    <div id="modal-app-lock" class="fixed inset-0 bg-slate-900/80 modal-blur z-50 flex items-center justify-center p-4">
+    <div id="modal-app-lock" class="fixed inset-0 bg-slate-900/80 modal-blur z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-sm p-8 shadow-2xl text-center">
             <div class="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center text-2xl mx-auto mb-4">
                 <i class="fa-solid fa-lock"></i>
@@ -922,47 +941,24 @@
         let db = null;
         let auth = null;
 
+        /* REFRESH FULL PAGE: Memuat ulang halaman penuh seperti browser reload */
         function handleManualRefresh() {
             const icon = document.getElementById('header-refresh-icon');
             if (icon) icon.classList.add('fa-spin');
 
-            setupDates();
-
-            if (state.isCloudOnline && db) {
-                db.collection("bookings").get().then(snapshot => {
-                    state.bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderTimeline();
-                    renderTransactions();
-                    renderOrdersPage();
-                    updateOrderBadges();
-                    showCustomToast("Data cloud & jadwal berhasil disinkronkan!", "success");
-                }).catch(err => {
-                    console.warn("Sinkronisasi manual cloud terkendala:", err);
-                    renderTimeline();
-                    renderTransactions();
-                    renderOrdersPage();
-                    updateOrderBadges();
-                    showCustomToast("Jadwal dan pesanan disegarkan.", "info");
-                }).finally(() => {
-                    setTimeout(() => {
-                        if (icon) icon.classList.remove('fa-spin');
-                    }, 650);
-                });
-            } else {
-                initLocalStore();
-                renderTimeline();
-                renderTransactions();
-                renderOrdersPage();
-                updateOrderBadges();
-                setTimeout(() => {
-                    if (icon) icon.classList.remove('fa-spin');
-                    showCustomToast("Tampilan jadwal & pesanan disegarkan.", "info");
-                }, 400);
+            // Simpan status unlock kasir di sessionStorage agar tidak perlu memasukkan PIN lagi setelah reload
+            if (state.appUnlocked) {
+                sessionStorage.setItem('mj_pos_unlocked_session', 'true');
             }
+
+            setTimeout(() => {
+                window.location.reload();
+            }, 120);
         }
 
         function lockApp() {
             state.appUnlocked = false;
+            sessionStorage.removeItem('mj_pos_unlocked_session');
             const input = document.getElementById('app-pin-input');
             if (input) input.value = '';
             document.getElementById('app-pin-err')?.classList.add('hidden');
@@ -974,6 +970,7 @@
             const inputPin = document.getElementById('app-pin-input')?.value;
             if (inputPin === state.cashierPin) {
                 state.appUnlocked = true;
+                sessionStorage.setItem('mj_pos_unlocked_session', 'true');
                 document.getElementById('modal-app-lock')?.classList.add('hidden');
                 document.getElementById('app-pin-err')?.classList.add('hidden');
                 showCustomToast("Akses aplikasi kasir terbuka.", "success");
@@ -1012,14 +1009,14 @@
                         hideOfflineLock();
                         subscribeCloudData();
                     }).catch(err => {
-                        console.warn("Auth Firebase gagal, memblokir penggunaan offline:", err);
+                        console.warn("Auth Firebase gagal, beralih ke penyimpanan lokal:", err);
                         fallbackToLocalStorage();
                     });
                 } else {
                     fallbackToLocalStorage();
                 }
             } catch (e) {
-                console.warn("Inisialisasi Firebase gagal, memblokir penggunaan offline:", e);
+                console.warn("Inisialisasi Firebase gagal, beralih ke penyimpanan lokal:", e);
                 fallbackToLocalStorage();
             }
         }
@@ -1101,39 +1098,39 @@
         }
 
         function initLocalStore() {
-            const savedRates = localStorage.getItem('mj_day_rates_v7');
+            const savedRates = localStorage.getItem('mj_day_rates_v8');
             if (savedRates) { try { state.dayRates = JSON.parse(savedRates); } catch(e){} }
 
-            const savedCashierPin = localStorage.getItem('mj_cashier_pin_v7');
+            const savedCashierPin = localStorage.getItem('mj_cashier_pin_v8');
             if (savedCashierPin) state.cashierPin = savedCashierPin;
 
-            const savedPin = localStorage.getItem('mj_owner_pin_v7');
+            const savedPin = localStorage.getItem('mj_owner_pin_v8');
             if (savedPin) state.ownerPin = savedPin;
 
-            const savedBookings = localStorage.getItem('mj_bookings_v7');
+            const savedBookings = localStorage.getItem('mj_bookings_v8');
             if (savedBookings) { try { state.bookings = JSON.parse(savedBookings); } catch(e){} }
 
-            const savedProducts = localStorage.getItem('mj_products_v7');
+            const savedProducts = localStorage.getItem('mj_products_v8');
             if (savedProducts) { try { state.products = JSON.parse(savedProducts); } catch(e){} }
 
-            const savedRules = localStorage.getItem('mj_discount_rules_v7');
+            const savedRules = localStorage.getItem('mj_discount_rules_v8');
             if (savedRules) { try { state.discountRules = JSON.parse(savedRules); } catch(e){} }
 
-            const savedSettings = localStorage.getItem('mj_app_settings_v7');
+            const savedSettings = localStorage.getItem('mj_app_settings_v8');
             if (savedSettings) { try { state.settings = JSON.parse(savedSettings); } catch(e){} }
         }
 
         function saveLocalBookings() {
-            localStorage.setItem('mj_bookings_v7', JSON.stringify(state.bookings));
+            localStorage.setItem('mj_bookings_v8', JSON.stringify(state.bookings));
         }
 
         function saveLocalSettings() {
-            localStorage.setItem('mj_day_rates_v7', JSON.stringify(state.dayRates));
-            localStorage.setItem('mj_cashier_pin_v7', state.cashierPin);
-            localStorage.setItem('mj_owner_pin_v7', state.ownerPin);
-            localStorage.setItem('mj_products_v7', JSON.stringify(state.products));
-            localStorage.setItem('mj_discount_rules_v7', JSON.stringify(state.discountRules));
-            localStorage.setItem('mj_app_settings_v7', JSON.stringify(state.settings));
+            localStorage.setItem('mj_day_rates_v8', JSON.stringify(state.dayRates));
+            localStorage.setItem('mj_cashier_pin_v8', state.cashierPin);
+            localStorage.setItem('mj_owner_pin_v8', state.ownerPin);
+            localStorage.setItem('mj_products_v8', JSON.stringify(state.products));
+            localStorage.setItem('mj_discount_rules_v8', JSON.stringify(state.discountRules));
+            localStorage.setItem('mj_app_settings_v8', JSON.stringify(state.settings));
         }
 
         function formatIDR(amount) {
@@ -1174,6 +1171,7 @@
             return slotDate < now;
         }
 
+        /* KALKULASI TOTAL OTOMATIS REAL-TIME */
         function calculateBookingTotals(booking) {
             if (!booking) return { tableFee: 0, fbFee: 0, subtotal: 0, discount: 0, bookingFee: 0, finalTotal: 0 };
             
@@ -1416,6 +1414,7 @@
                             const startTimeStr = slotIndexToTime(activeBooking.startSlot);
                             const endTimeStr = slotIndexToTime(activeBooking.startSlot + activeBooking.durationSlots);
 
+                            // Menghitung total Rupiah terkini secara real-time
                             const totals = calculateBookingTotals(activeBooking);
                             const displayRupiah = formatIDR(totals.finalTotal);
 
@@ -1518,12 +1517,14 @@
             }
         }
 
+        /* OPSI DURASI BOOKING BARU: 1 JAM S/D MAKSIMAL 5 JAM (KELIPATAN 0.5 JAM) */
         function populateDurationOptions() {
             const select = document.getElementById('form-duration-slots');
             if (!select) return;
             select.innerHTML = '';
             
-            for (let slots = 4; slots <= 32; slots += 2) {
+            // 4 slot = 1.0 Jam, 20 slot = 5.0 Jam (step 2 slot = 0.5 Jam)
+            for (let slots = 4; slots <= 20; slots += 2) {
                 const hrs = slots * 0.25;
                 const opt = document.createElement('option');
                 opt.value = slots;
@@ -1806,15 +1807,18 @@
 
             select.innerHTML = '';
 
-            if (freeSlots >= 4) {
-                const maxHours = Math.floor(freeSlots * 0.25);
+            // freeSlots >= 2 slot (30 Menit / 0.5 Jam)
+            if (freeSlots >= 2) {
+                const maxHours = freeSlots * 0.25;
                 maxInfo.innerText = `Bisa tambah hingga: ${maxHours} Jam`;
                 maxInfo.className = "text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200";
 
-                for (let h = 1; h <= Math.min(6, maxHours); h++) {
+                // Kelipatan 2 slot (0.5 Jam)
+                for (let s = 2; s <= Math.min(24, freeSlots); s += 2) {
+                    const h = s * 0.25;
                     const opt = document.createElement('option');
-                    opt.value = h * 4;
-                    opt.innerText = `+${h}.0 Jam`;
+                    opt.value = s;
+                    opt.innerText = `+${h} Jam`;
                     select.appendChild(opt);
                 }
                 applyBtn.disabled = false;
@@ -2222,6 +2226,7 @@
             const printContainer = document.getElementById('thermal-print-direct-container');
             if (!printContainer) return;
 
+            // Hapus notifikasi animasi toast yang melayang di layar agar tidak bocor ke cetakan
             document.querySelectorAll('div.animate-bounce').forEach(el => el.remove());
 
             printContainer.innerHTML = buildReceiptDOMString(booking);
@@ -2577,8 +2582,20 @@
         function renderTransactions() {
             const startDate = document.getElementById('trans-start-date')?.value || state.selectedDate;
             const endDate = document.getElementById('trans-end-date')?.value || state.selectedDate;
+            const statusFilter = document.getElementById('trans-filter-status')?.value || 'ALL';
 
-            const filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+            let filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+
+            // Filter berdasarkan status transaksi
+            if (statusFilter !== 'ALL') {
+                if (statusFilter === 'COMPLETED') {
+                    filteredBookings = filteredBookings.filter(b => b.status === 'COMPLETED' || b.status === 'PAID');
+                } else if (statusFilter === 'BOOKED') {
+                    filteredBookings = filteredBookings.filter(b => b.status === 'BOOKED');
+                } else if (statusFilter === 'CANCELLED') {
+                    filteredBookings = filteredBookings.filter(b => b.status === 'CANCELLED');
+                }
+            }
 
             const tbody = document.getElementById('trans-table-body');
             if (!tbody) return;
@@ -2593,7 +2610,7 @@
                     <tr>
                         <td colspan="13" class="py-8 text-center text-slate-400 font-medium">
                             <i class="fa-solid fa-receipt text-3xl mb-2 block opacity-40"></i>
-                            Tidak ada transaksi ditemukan pada rentang tanggal ${startDate} s/d ${endDate}
+                            Tidak ada transaksi ditemukan untuk rentang tanggal & status ini
                         </td>
                     </tr>
                 `;
@@ -2675,11 +2692,22 @@
         function exportTransactionsToExcel() {
             const startDate = document.getElementById('trans-start-date')?.value || state.selectedDate;
             const endDate = document.getElementById('trans-end-date')?.value || state.selectedDate;
+            const statusFilter = document.getElementById('trans-filter-status')?.value || 'ALL';
 
-            const filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+            let filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+
+            if (statusFilter !== 'ALL') {
+                if (statusFilter === 'COMPLETED') {
+                    filteredBookings = filteredBookings.filter(b => b.status === 'COMPLETED' || b.status === 'PAID');
+                } else if (statusFilter === 'BOOKED') {
+                    filteredBookings = filteredBookings.filter(b => b.status === 'BOOKED');
+                } else if (statusFilter === 'CANCELLED') {
+                    filteredBookings = filteredBookings.filter(b => b.status === 'CANCELLED');
+                }
+            }
 
             if (filteredBookings.length === 0) {
-                showCustomToast("Tidak ada transaksi untuk diekspor pada rentang tanggal ini.", "error");
+                showCustomToast("Tidak ada transaksi untuk diekspor pada filter ini.", "error");
                 return;
             }
 
@@ -2993,7 +3021,15 @@
             renderTimeline();
             renderOrdersPage();
             updateOrderBadges();
-            lockApp();
+
+            // Memeriksa apakah kasir sebelumnya sudah login sebelum halaman di-refresh
+            const wasUnlocked = sessionStorage.getItem('mj_pos_unlocked_session') === 'true';
+            if (wasUnlocked) {
+                state.appUnlocked = true;
+                document.getElementById('modal-app-lock')?.classList.add('hidden');
+            } else {
+                lockApp();
+            }
         };
     </script>
 </body>
