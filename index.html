@@ -145,6 +145,10 @@
                 <i class="fa-solid fa-lock text-amber-600"></i>
                 <span class="hidden md:inline">Kunci Layar</span>
             </button>
+            <button onclick="openDirectSaleModal()" class="bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-bold px-3 py-2 rounded-xl flex items-center gap-1.5 transition shadow-md shadow-amber-600/20 text-xs sm:text-sm">
+                <i class="fa-solid fa-bag-shopping"></i>
+                <span>Beli F&B Saja</span>
+            </button>
             <button onclick="openBookingModal()" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold px-3.5 py-2 rounded-xl flex items-center gap-2 transition shadow-md shadow-emerald-600/20 text-xs sm:text-sm">
                 <i class="fa-solid fa-plus"></i>
                 <span>Booking Meja</span>
@@ -379,6 +383,7 @@
                                 <th class="py-3.5 px-4 text-right">Diskon</th>
                                 <th class="py-3.5 px-4 text-right">Total Bayar</th>
                                 <th class="py-3.5 px-4 text-center">Status</th>
+                                <th class="py-3.5 px-4 text-center">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="trans-table-body" class="divide-y divide-slate-200 text-sm"></tbody>
@@ -614,7 +619,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Durasi Main (1 s/d 5 Jam)</label>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Durasi Main</label>
                     <div class="grid grid-cols-2 gap-3 items-center">
                         <select id="form-duration-slots" onchange="calculateFormPrice()" required class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 font-semibold focus:outline-none focus:border-emerald-500 transition"></select>
                         <span id="form-end-time-preview" class="text-xs font-bold text-slate-600 bg-slate-100 p-2.5 rounded-xl text-center border border-slate-200">Selesai: --:--</span>
@@ -623,9 +628,10 @@
 
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Catatan Tambahan (Opsional)</label>
-                    <input type="text" id="form-notes" placeholder="Contoh: Minta meja dekat kipas" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-emerald-500 transition">
+                    <input type="text" id="form-notes" placeholder="Contoh: Minta meja dekat pendingin" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-xs text-slate-800 font-medium focus:outline-none focus:border-emerald-500 transition">
                 </div>
 
+                <!-- Opsi Booking Fee / DP -->
                 <div id="form-container-booking-fee" class="hidden p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between">
                     <div>
                         <span class="font-bold text-xs text-slate-800 block">Bayar Booking Fee / DP</span>
@@ -649,6 +655,199 @@
                     <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md shadow-emerald-600/20 text-sm">Kunci Booking</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: BELI F&B LANGSUNG (TAKEAWAY / TANPA MEJA) -->
+    <div id="modal-direct-sale" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl my-auto max-h-[92vh] flex flex-col">
+            <div class="bg-amber-50 px-6 py-4 border-b border-amber-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center text-base shadow-sm">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-base text-slate-900">Pesanan F&B Langsung</h3>
+                        <p class="text-xs text-amber-800 font-medium">Beli makanan, minuman & snack tanpa sewa meja</p>
+                    </div>
+                </div>
+                <button onclick="closeDirectSaleModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Bagian Form Pembelian F&B Langsung -->
+            <div id="direct-sale-form-container" class="p-6 flex flex-col gap-4 overflow-y-auto flex-1">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Nama Pembeli (Opsional)</label>
+                        <input type="text" id="direct-customer-name" placeholder="Contoh: Tamu Walk-in" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">No. HP (Opsional)</label>
+                        <input type="tel" id="direct-customer-phone" placeholder="Contoh: 0812-..." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Catatan Pesanan (Opsional)</label>
+                    <input type="text" id="direct-customer-notes" placeholder="Contoh: Takeaway / Dingin sedikit es" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-500 transition">
+                </div>
+
+                <!-- Bagian Tambah Item -->
+                <div class="border border-slate-200 rounded-2xl p-3.5 bg-slate-50 flex flex-col gap-2.5">
+                    <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-utensils text-amber-600"></i> Pilih Menu F&B
+                    </span>
+                    <div class="flex gap-2">
+                        <select id="direct-fb-picker" class="flex-1 bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-amber-500"></select>
+                        <input type="number" id="direct-fb-qty" value="1" min="1" class="w-16 bg-white border border-slate-300 rounded-xl px-2 py-2 text-xs text-center font-bold">
+                        <button type="button" onclick="addDirectSaleItem()" class="bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-sm">
+                            + Tambah
+                        </button>
+                    </div>
+
+                    <!-- Keranjang Pesanan Langsung -->
+                    <div id="direct-fb-list-container" class="flex flex-col gap-1.5 pt-1"></div>
+                </div>
+
+                <!-- Diskon Ulasan Google -->
+                <div id="direct-container-google-discount" class="flex items-center gap-2 p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs hidden">
+                    <input type="checkbox" id="direct-chk-google-discount" onchange="recalculateDirectSaleSummary()" class="w-4 h-4 text-amber-600 rounded">
+                    <label for="direct-chk-google-discount" class="font-bold text-slate-700 cursor-pointer">Diskon Ulasan Google (5%)</label>
+                </div>
+
+                <!-- Ringkasan Total Tagihan -->
+                <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex flex-col gap-1.5 text-xs">
+                    <div class="flex justify-between text-slate-600 font-medium">
+                        <span>Total F&B / Belanja:</span>
+                        <span id="direct-summary-subtotal" class="font-bold text-slate-800">Rp 0</span>
+                    </div>
+                    <div id="direct-row-discount-google" class="flex justify-between text-amber-800 font-medium hidden">
+                        <span>• Diskon Ulasan Google (5%):</span>
+                        <span id="direct-summary-discount" class="font-bold">- Rp 0</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-amber-200 pt-2.5 mt-1">
+                        <span class="font-extrabold text-slate-900 uppercase">Total Bayar:</span>
+                        <span id="direct-summary-total" class="text-2xl font-black text-amber-700">Rp 0</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-1">
+                    <button type="button" onclick="closeDirectSaleModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Batal</button>
+                    <button type="button" onclick="confirmDirectSale()" class="flex-1 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow-md shadow-amber-600/20 text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <span>Bayar & Selesaikan</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tampilan Sukses & Opsi Cetak Struk Langsung -->
+            <div id="direct-sale-success-container" class="p-6 flex flex-col gap-4 text-center hidden">
+                <div class="w-16 h-16 rounded-2xl bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center text-3xl mx-auto mb-1">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h3 class="font-black text-xl text-slate-900">Pembayaran Berhasil!</h3>
+                <p class="text-xs text-slate-500 -mt-2">Transaksi pesanan langsung telah dicatat dan terkirim ke dapur/bar.</p>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs flex flex-col gap-2 text-left">
+                    <div class="flex justify-between"><span class="text-slate-500">No. Transaksi:</span><span id="direct-success-id" class="font-mono font-bold text-slate-800">-</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Nama Pembeli:</span><span id="direct-success-name" class="font-bold text-slate-800">-</span></div>
+                    <div class="flex justify-between"><span class="text-slate-500">Item Pesanan:</span><span id="direct-success-items" class="font-bold text-slate-800">-</span></div>
+                    <div class="flex justify-between border-t border-slate-200 pt-2"><span class="font-extrabold text-slate-800">Total Akhir:</span><span id="direct-success-total" class="font-mono font-black text-emerald-700 text-base">Rp 0</span></div>
+                </div>
+
+                <div class="flex flex-col gap-2.5 mt-2">
+                    <button id="btn-direct-print" onclick="handlePrintCurrentDirectSale()" class="w-full bg-slate-900 hover:bg-black active:scale-95 text-white font-extrabold py-3.5 rounded-xl transition shadow-md text-sm flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-print text-base"></i>
+                        <span>Cetak Struk Pembayaran</span>
+                    </button>
+                    <button type="button" onclick="closeDirectSaleModal()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-xl transition text-xs">
+                        Tutup
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DETAIL & KELOLA PESANAN TAKEAWAY -->
+    <div id="modal-takeaway-detail" class="fixed inset-0 bg-slate-900/60 modal-blur z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl my-auto flex flex-col">
+            <div class="bg-amber-50 px-6 py-4 border-b border-amber-200 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-amber-600 text-white flex items-center justify-center text-base shadow-sm">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-extrabold text-base text-slate-900">Detail Pesanan Takeaway</h3>
+                        <p class="text-xs text-amber-800 font-mono font-bold" id="takeaway-detail-id">#FB----</p>
+                    </div>
+                </div>
+                <button onclick="closeTakeawayDetailModal()" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
+                <div class="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+                    <div>
+                        <span class="text-slate-400 font-medium block">Status Pesanan:</span>
+                        <span id="takeaway-detail-status" class="font-extrabold text-emerald-700">LUNAS</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-slate-400 font-medium block">Waktu Transaksi:</span>
+                        <span id="takeaway-detail-time" class="font-mono font-bold text-slate-700">-</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-1.5 text-xs">
+                    <div class="flex justify-between">
+                        <span class="text-slate-500 font-medium">Nama Pembeli:</span>
+                        <span id="takeaway-detail-name" class="font-bold text-slate-900">-</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-500 font-medium">No. Handphone:</span>
+                        <span id="takeaway-detail-phone" class="font-mono text-slate-700 font-bold">-</span>
+                    </div>
+                    <div class="flex justify-between border-t border-slate-200 pt-1.5 mt-1">
+                        <span class="text-slate-500 font-medium">Catatan Pesanan:</span>
+                        <span id="takeaway-detail-notes" class="font-semibold text-amber-800 italic">-</span>
+                    </div>
+                </div>
+
+                <div class="border border-slate-200 rounded-2xl p-3.5 flex flex-col gap-2">
+                    <span class="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-utensils text-amber-600"></i> Rincian Menu Pesanan
+                    </span>
+                    <div id="takeaway-detail-items-container" class="flex flex-col gap-1.5 text-xs"></div>
+                </div>
+
+                <div class="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 flex flex-col gap-1.5 text-xs">
+                    <div class="flex justify-between text-slate-600 font-medium">
+                        <span>Subtotal F&B:</span>
+                        <span id="takeaway-detail-subtotal" class="font-bold text-slate-800 font-mono">Rp 0</span>
+                    </div>
+                    <div id="takeaway-detail-row-discount" class="flex justify-between text-amber-800 font-medium hidden">
+                        <span>• Diskon Ulasan Google (5%):</span>
+                        <span id="takeaway-detail-discount" class="font-bold font-mono">- Rp 0</span>
+                    </div>
+                    <div class="flex justify-between items-center border-t border-amber-200 pt-2.5 mt-1">
+                        <span class="font-extrabold text-slate-900 uppercase">Total Bayar:</span>
+                        <span id="takeaway-detail-total" class="text-2xl font-black text-amber-700 font-mono">Rp 0</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-2 pt-1">
+                    <button id="btn-takeaway-reprint" onclick="handlePrintTakeawayFromModal()" class="w-full bg-slate-900 hover:bg-black active:scale-95 text-white font-extrabold py-3 rounded-xl transition text-xs flex items-center justify-center gap-2 shadow-md">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Cetak Struk Pembayaran</span>
+                    </button>
+                    <button id="btn-takeaway-cancel" onclick="openPinCancelForTakeaway()" class="w-full bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold py-2.5 rounded-xl transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-ban"></i>
+                        <span>Batalkan Pesanan Takeaway (Perlu PIN)</span>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -934,6 +1133,8 @@
                 bookingFeeEnabled: false
             },
             currentFBItems: [],
+            directSaleItems: [],
+            lastCompletedDirectSale: null,
             ordersFilter: "ALL",
             isCloudOnline: false
         };
@@ -1175,6 +1376,28 @@
         function calculateBookingTotals(booking) {
             if (!booking) return { tableFee: 0, fbFee: 0, subtotal: 0, discount: 0, bookingFee: 0, finalTotal: 0 };
             
+            // Perhitungan khusus transaksi F&B langsung tanpa sewa meja
+            if (booking.isDirectSale || booking.table === 0) {
+                const items = booking.items || [];
+                const fbFee = items.reduce((s, i) => s + (i.price * i.qty), 0);
+                let googleDiscountAmt = booking.googleDiscountAmount || 0;
+                if (state.settings.googleReviewDiscountEnabled && booking.googleReviewDiscount && !booking.googleDiscountAmount) {
+                    googleDiscountAmt = Math.round(fbFee * 0.05);
+                }
+                const totalDiscount = googleDiscountAmt;
+                const finalTotal = booking.finalTotal !== undefined ? booking.finalTotal : Math.max(0, fbFee - totalDiscount);
+                return {
+                    tableFee: 0,
+                    fbFee,
+                    subtotal: fbFee,
+                    googleDiscountAmt,
+                    autoDiscountAmt: 0,
+                    totalDiscount,
+                    bookingFee: 0,
+                    finalTotal
+                };
+            }
+
             const durationHrs = (booking.durationSlots || 4) * 0.25;
             const hourlyRate = booking.hourlyRate || getHourlyRateForDate(booking.date);
             const tableFee = durationHrs * hourlyRate;
@@ -1477,9 +1700,9 @@
         }
 
         function openBookingModalForSlot(tableNum, startSlot) {
-            if (document.getElementById('form-table')) document.getElementById('form-table').value = tableNum;
             populateStartTimes();
             populateDurationOptions();
+            if (document.getElementById('form-table')) document.getElementById('form-table').value = tableNum;
             if (document.getElementById('form-start-slot')) document.getElementById('form-start-slot').value = startSlot;
             
             const bfContainer = document.getElementById('form-container-booking-fee');
@@ -1495,6 +1718,226 @@
 
             calculateFormPrice();
             document.getElementById('modal-create-booking')?.classList.remove('hidden');
+        }
+
+        /* LOGIKA TRANSAKSI F&B LANGSUNG (TAKEAWAY / TANPA MEJA) */
+        function openDirectSaleModal() {
+            state.directSaleItems = [];
+            state.lastCompletedDirectSale = null;
+
+            if (document.getElementById('direct-customer-name')) document.getElementById('direct-customer-name').value = '';
+            if (document.getElementById('direct-customer-phone')) document.getElementById('direct-customer-phone').value = '';
+            if (document.getElementById('direct-customer-notes')) document.getElementById('direct-customer-notes').value = '';
+            if (document.getElementById('direct-fb-qty')) document.getElementById('direct-fb-qty').value = 1;
+
+            const chkGoogle = document.getElementById('direct-chk-google-discount');
+            const containerGoogle = document.getElementById('direct-container-google-discount');
+            if (containerGoogle && chkGoogle) {
+                if (state.settings.googleReviewDiscountEnabled) {
+                    containerGoogle.classList.remove('hidden');
+                    chkGoogle.checked = false;
+                } else {
+                    containerGoogle.classList.add('hidden');
+                    chkGoogle.checked = false;
+                }
+            }
+
+            populateDirectFBPicker();
+            renderDirectSaleItems();
+            recalculateDirectSaleSummary();
+
+            document.getElementById('direct-sale-form-container')?.classList.remove('hidden');
+            document.getElementById('direct-sale-success-container')?.classList.add('hidden');
+            document.getElementById('modal-direct-sale')?.classList.remove('hidden');
+        }
+
+        function closeDirectSaleModal() {
+            document.getElementById('modal-direct-sale')?.classList.add('hidden');
+        }
+
+        function populateDirectFBPicker() {
+            const picker = document.getElementById('direct-fb-picker');
+            if (!picker) return;
+            picker.innerHTML = '';
+            state.products.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.innerText = `${p.name} - ${formatIDR(p.price)}`;
+                picker.appendChild(opt);
+            });
+        }
+
+        function addDirectSaleItem() {
+            const picker = document.getElementById('direct-fb-picker');
+            const qtyInput = document.getElementById('direct-fb-qty');
+            if (!picker || !qtyInput) return;
+
+            const prodId = picker.value;
+            const qty = parseInt(qtyInput.value) || 1;
+            const prod = state.products.find(p => p.id === prodId);
+            if (!prod) return;
+
+            const existing = state.directSaleItems.find(i => i.id === prodId);
+            if (existing) {
+                existing.qty += qty;
+            } else {
+                state.directSaleItems.push({
+                    id: prod.id,
+                    name: prod.name,
+                    price: prod.price,
+                    qty: qty,
+                    delivered: false
+                });
+            }
+
+            renderDirectSaleItems();
+            recalculateDirectSaleSummary();
+            qtyInput.value = 1;
+            showCustomToast(`Menu "${prod.name}" ditambahkan ke pesanan langsung.`, "success");
+        }
+
+        function removeDirectSaleItem(index) {
+            state.directSaleItems.splice(index, 1);
+            renderDirectSaleItems();
+            recalculateDirectSaleSummary();
+        }
+
+        function renderDirectSaleItems() {
+            const container = document.getElementById('direct-fb-list-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (state.directSaleItems.length === 0) {
+                container.innerHTML = `<span class="text-[11px] text-slate-400 italic">Belum ada item F&B dipilih. Silakan pilih menu di atas.</span>`;
+                return;
+            }
+
+            state.directSaleItems.forEach((item, idx) => {
+                const subtotal = item.price * item.qty;
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between text-xs p-2 rounded-xl border bg-white border-slate-200";
+                div.innerHTML = `
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                        <div>
+                            <span class="font-bold text-slate-800">${item.name}</span>
+                            <span class="text-slate-500 font-mono text-[11px] ml-1">x${item.qty} (@${formatIDR(item.price)})</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-amber-700 font-mono">${formatIDR(subtotal)}</span>
+                        <button type="button" onclick="removeDirectSaleItem(${idx})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function recalculateDirectSaleSummary() {
+            const subtotal = state.directSaleItems.reduce((s, i) => s + (i.price * i.qty), 0);
+            const isGoogleChecked = document.getElementById('direct-chk-google-discount')?.checked;
+
+            let googleDiscountAmt = 0;
+            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
+            }
+
+            const total = Math.max(0, subtotal - googleDiscountAmt);
+
+            if (document.getElementById('direct-summary-subtotal')) document.getElementById('direct-summary-subtotal').innerText = formatIDR(subtotal);
+
+            const rowGoogle = document.getElementById('direct-row-discount-google');
+            if (rowGoogle) {
+                if (googleDiscountAmt > 0) {
+                    rowGoogle.classList.remove('hidden');
+                    document.getElementById('direct-summary-discount').innerText = `- ${formatIDR(googleDiscountAmt)}`;
+                } else {
+                    rowGoogle.classList.add('hidden');
+                }
+            }
+
+            if (document.getElementById('direct-summary-total')) document.getElementById('direct-summary-total').innerText = formatIDR(total);
+        }
+
+        function confirmDirectSale() {
+            if (state.directSaleItems.length === 0) {
+                showCustomToast("Pilih minimal 1 menu makanan/minuman terlebih dahulu.", "error");
+                return;
+            }
+
+            const name = document.getElementById('direct-customer-name')?.value.trim() || "Pelanggan Langsung";
+            const phone = document.getElementById('direct-customer-phone')?.value.trim() || "-";
+            const notes = document.getElementById('direct-customer-notes')?.value.trim() || "Pesanan F&B Langsung (Takeaway)";
+            const isGoogleChecked = document.getElementById('direct-chk-google-discount')?.checked;
+
+            const subtotal = state.directSaleItems.reduce((s, i) => s + (i.price * i.qty), 0);
+            let googleDiscountAmt = 0;
+            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
+            }
+            const finalTotal = Math.max(0, subtotal - googleDiscountAmt);
+
+            const directTrx = {
+                id: "FB-" + Math.floor(1000 + Math.random() * 9000),
+                isDirectSale: true,
+                date: state.selectedDate,
+                table: 0,
+                name: name,
+                phone: phone,
+                startSlot: 0,
+                durationSlots: 0,
+                hourlyRate: 0,
+                tableFee: 0,
+                bookingFee: 0,
+                items: state.directSaleItems.map(i => ({ ...i, delivered: false })),
+                googleReviewDiscount: !!isGoogleChecked,
+                googleDiscountAmount: googleDiscountAmt,
+                autoDiscountAmount: 0,
+                totalDiscount: googleDiscountAmt,
+                finalTotal: finalTotal,
+                status: "COMPLETED",
+                notes: notes,
+                createdTime: new Date().toISOString(),
+                completedOrCancelledTime: new Date().toISOString()
+            };
+
+            state.bookings.push(directTrx);
+            saveCloudBooking(directTrx);
+
+            state.lastCompletedDirectSale = directTrx;
+
+            // Tampilkan kartu sukses beserta tombol cetak struk
+            document.getElementById('direct-sale-form-container')?.classList.add('hidden');
+            const successContainer = document.getElementById('direct-sale-success-container');
+            if (successContainer) {
+                successContainer.classList.remove('hidden');
+                document.getElementById('direct-success-id').innerText = `#${directTrx.id}`;
+                document.getElementById('direct-success-name').innerText = directTrx.name;
+                document.getElementById('direct-success-items').innerText = `${directTrx.items.length} macam item (${directTrx.items.reduce((s, i) => s + i.qty, 0)} total porsi)`;
+                document.getElementById('direct-success-total').innerText = formatIDR(directTrx.finalTotal);
+            }
+
+            renderTransactions();
+            renderOrdersPage();
+            updateOrderBadges();
+            showCustomToast(`Transaksi pesanan langsung #${directTrx.id} berhasil dicatat Lunas!`, "success");
+        }
+
+        function handlePrintCurrentDirectSale() {
+            if (!state.lastCompletedDirectSale) {
+                showCustomToast("Tidak ada data pesanan langsung untuk dicetak.", "error");
+                return;
+            }
+            printThermalReceipt(state.lastCompletedDirectSale);
+        }
+
+        function printThermalReceiptById(bookingId) {
+            const booking = state.bookings.find(b => b.id === bookingId);
+            if (!booking) {
+                showCustomToast("Data transaksi tidak ditemukan.", "error");
+                return;
+            }
+            printThermalReceipt(booking);
         }
 
         function closeBookingModal() {
@@ -2130,6 +2573,96 @@
             document.getElementById('modal-manage-booking')?.classList.add('hidden');
         }
 
+        /* MODAL DETAIL & KELOLA PESANAN TAKEAWAY */
+        let activeTakeawayId = null;
+
+        function openTakeawayDetailModal(bookingId) {
+            const booking = state.bookings.find(b => b.id === bookingId);
+            if (!booking) return;
+
+            activeTakeawayId = bookingId;
+            state.activeBookingId = bookingId;
+
+            const isCancelled = booking.status === "CANCELLED";
+            const totals = calculateBookingTotals(booking);
+
+            if (document.getElementById('takeaway-detail-id')) document.getElementById('takeaway-detail-id').innerText = `#${booking.id}`;
+            if (document.getElementById('takeaway-detail-name')) document.getElementById('takeaway-detail-name').innerText = booking.name || 'Pelanggan Langsung';
+            if (document.getElementById('takeaway-detail-phone')) document.getElementById('takeaway-detail-phone').innerText = booking.phone || '-';
+            if (document.getElementById('takeaway-detail-notes')) document.getElementById('takeaway-detail-notes').innerText = booking.notes || 'Tidak ada catatan';
+            if (document.getElementById('takeaway-detail-time')) document.getElementById('takeaway-detail-time').innerText = formatDateTime(booking.createdTime);
+
+            const statusEl = document.getElementById('takeaway-detail-status');
+            const cancelBtn = document.getElementById('btn-takeaway-cancel');
+
+            if (statusEl) {
+                if (isCancelled) {
+                    statusEl.innerText = "DIBATALKAN";
+                    statusEl.className = "font-black text-rose-600 bg-rose-100 px-2 py-0.5 rounded-md text-[11px]";
+                    if (cancelBtn) cancelBtn.classList.add('hidden');
+                } else {
+                    statusEl.innerText = "LUNAS / SELESAI";
+                    statusEl.className = "font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md text-[11px]";
+                    if (cancelBtn) cancelBtn.classList.remove('hidden');
+                }
+            }
+
+            const itemsContainer = document.getElementById('takeaway-detail-items-container');
+            if (itemsContainer) {
+                itemsContainer.innerHTML = '';
+                (booking.items || []).forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = "flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200";
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full ${item.delivered ? 'bg-emerald-500' : 'bg-amber-500'}"></span>
+                            <div>
+                                <span class="font-bold text-slate-800">${item.name}</span>
+                                <span class="text-slate-500 font-mono text-[11px] block">${item.qty} × ${formatIDR(item.price)}</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-slate-800 font-mono">${formatIDR(item.price * item.qty)}</span>
+                            <span class="text-[10px] font-bold block ${item.delivered ? 'text-emerald-700' : 'text-amber-700'}">${item.delivered ? 'Sudah Keluar' : 'Menunggu'}</span>
+                        </div>
+                    `;
+                    itemsContainer.appendChild(row);
+                });
+            }
+
+            if (document.getElementById('takeaway-detail-subtotal')) document.getElementById('takeaway-detail-subtotal').innerText = formatIDR(totals.subtotal);
+
+            const rowDiscount = document.getElementById('takeaway-detail-row-discount');
+            if (rowDiscount) {
+                if (totals.googleDiscountAmt > 0) {
+                    rowDiscount.classList.remove('hidden');
+                    document.getElementById('takeaway-detail-discount').innerText = `- ${formatIDR(totals.googleDiscountAmt)}`;
+                } else {
+                    rowDiscount.classList.add('hidden');
+                }
+            }
+
+            if (document.getElementById('takeaway-detail-total')) {
+                document.getElementById('takeaway-detail-total').innerText = isCancelled ? "Rp 0 (Batal)" : formatIDR(totals.finalTotal);
+            }
+
+            document.getElementById('modal-takeaway-detail')?.classList.remove('hidden');
+        }
+
+        function closeTakeawayDetailModal() {
+            document.getElementById('modal-takeaway-detail')?.classList.add('hidden');
+        }
+
+        function handlePrintTakeawayFromModal() {
+            if (!activeTakeawayId) return;
+            printThermalReceiptById(activeTakeawayId);
+        }
+
+        function openPinCancelForTakeaway() {
+            state.activeBookingId = activeTakeawayId;
+            openPinModalForCancel();
+        }
+
         function confirmBookingPayment() {
             if (!state.activeBookingId || !state.isCloudOnline) {
                 if (!state.isCloudOnline) fallbackToLocalStorage();
@@ -2200,11 +2733,12 @@
                 saveCloudBooking(booking);
                 closePinModalForCancel();
                 closeManageModal();
+                closeTakeawayDetailModal();
                 renderTimeline();
                 renderTransactions();
                 renderOrdersPage();
                 updateOrderBadges();
-                showCustomToast("Pemesanan berhasil dibatalkan dan meja telah dilepaskan.", "info");
+                showCustomToast("Pemesanan berhasil dibatalkan dan transaksi telah ditandai CANCELLED.", "info");
             }
         }
 
@@ -2242,12 +2776,23 @@
         }
 
         function buildReceiptDOMString(booking) {
-            const startStr = slotIndexToTime(booking.startSlot);
-            const endStr = slotIndexToTime(booking.startSlot + booking.durationSlots);
-            const durationHrs = booking.durationSlots * 0.25;
+            const isDirect = booking.isDirectSale || booking.table === 0;
+            const startStr = isDirect ? '-' : slotIndexToTime(booking.startSlot);
+            const endStr = isDirect ? '-' : slotIndexToTime(booking.startSlot + booking.durationSlots);
+            const durationHrs = isDirect ? 0 : booking.durationSlots * 0.25;
 
             const totals = calculateBookingTotals(booking);
             const items = booking.items || [];
+
+            const typeBannerHtml = isDirect ? `
+                <div style="text-align: center; font-size: 23px; font-weight: 900; background: #000000; color: #ffffff; padding: 5px 2px; margin: 6px 0 8px 0; letter-spacing: 1px; text-transform: uppercase;">
+                    *** BUNGKUS / TAKEAWAY ***
+                </div>
+            ` : `
+                <div style="text-align: center; font-size: 21px; font-weight: 900; border: 2.5px solid #000000; padding: 4px 2px; margin: 6px 0 8px 0; letter-spacing: 0.5px; text-transform: uppercase;">
+                    *** DINE-IN (MEJA ${booking.table}) ***
+                </div>
+            `;
 
             let itemsHtml = '';
             if (items.length > 0) {
@@ -2269,7 +2814,7 @@
                     </div>
                 `;
             }
-            if (totals.autoDiscountAmt > 0) {
+            if (!isDirect && totals.autoDiscountAmt > 0) {
                 discountHtml += `
                     <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: #000000; margin-bottom: 4px;">
                         <span>Diskon Durasi:</span>
@@ -2277,7 +2822,7 @@
                     </div>
                 `;
             }
-            if (totals.bookingFee > 0) {
+            if (!isDirect && totals.bookingFee > 0) {
                 discountHtml += `
                     <div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; color: #000000; margin-bottom: 4px;">
                         <span>Booking Fee (DP):</span>
@@ -2285,6 +2830,42 @@
                     </div>
                 `;
             }
+
+            const headerInfoHtml = isDirect ? `
+                <div style="display: flex; justify-content: space-between; font-size: 20.5px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 800;">Layanan:</span>
+                    <span style="font-weight: 900; font-size: 22px;">TAKEAWAY / F&B</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Tanggal:</span>
+                    <span style="font-weight: 800;">${booking.date}</span>
+                </div>
+            ` : `
+                <div style="display: flex; justify-content: space-between; font-size: 20.5px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 800;">Meja:</span>
+                    <span style="font-weight: 900; font-size: 24px;">MEJA ${booking.table}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Jadwal Main:</span>
+                    <span style="font-weight: 800;">${booking.date}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Waktu:</span>
+                    <span style="font-family: monospace; font-weight: 800;">${startStr} - ${endStr}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
+                    <span style="font-weight: 700;">Durasi:</span>
+                    <span style="font-weight: 900;">${durationHrs} Jam</span>
+                </div>
+            `;
+
+            const tableFeeSectionHtml = isDirect ? '' : `
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; font-size: 22px; color: #000000;">
+                    <span style="font-weight: 900;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
+                    <span style="font-family: monospace; font-weight: 900; white-space: nowrap;">${formatIDR(totals.tableFee)}</span>
+                </div>
+                <div style="font-size: 18px; font-weight: 700; color: #000000; margin-bottom: 4px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
+            `;
 
             return `
                 <div style="text-align: center; margin-bottom: 8px;">
@@ -2297,6 +2878,8 @@
                 </div>
 
                 <div style="border-top: 2.5px dashed #000000; margin: 8px 0;"></div>
+
+                ${typeBannerHtml}
 
                 <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
                     <span style="font-weight: 700;">No. Struk:</span>
@@ -2314,33 +2897,13 @@
                     <span style="font-weight: 700;">Nomor HP:</span>
                     <span style="font-family: monospace; font-weight: 800;">${booking.phone}</span>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20.5px; margin-bottom: 4px; color: #000000;">
-                    <span style="font-weight: 800;">Meja:</span>
-                    <span style="font-weight: 900; font-size: 24px;">MEJA ${booking.table}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
-                    <span style="font-weight: 700;">Jadwal Main:</span>
-                    <span style="font-weight: 800;">${booking.date}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
-                    <span style="font-weight: 700;">Waktu:</span>
-                    <span style="font-family: monospace; font-weight: 800;">${startStr} - ${endStr}</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; font-size: 20px; margin-bottom: 4px; color: #000000;">
-                    <span style="font-weight: 700;">Durasi:</span>
-                    <span style="font-weight: 900;">${durationHrs} Jam</span>
-                </div>
+                ${headerInfoHtml}
 
                 <div style="border-top: 2.5px dashed #000000; margin: 8px 0;"></div>
 
                 <div style="font-size: 19px; font-weight: 900; color: #000000; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px;">Rincian Item</div>
 
-                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; font-size: 22px; color: #000000;">
-                    <span style="font-weight: 900;">Sewa Meja ${booking.table} (${durationHrs}j)</span>
-                    <span style="font-family: monospace; font-weight: 900; white-space: nowrap;">${formatIDR(totals.tableFee)}</span>
-                </div>
-                <div style="font-size: 18px; font-weight: 700; color: #000000; margin-bottom: 4px;">${durationHrs} jam × ${formatIDR(booking.hourlyRate || 50000)}/j</div>
-
+                ${tableFeeSectionHtml}
                 ${itemsHtml}
 
                 <div style="border-top: 2.5px dashed #000000; margin: 8px 0;"></div>
@@ -2360,8 +2923,10 @@
                 </div>
 
                 <div style="font-size: 17.5px; font-weight: 700; text-align: center; margin-top: 10px; padding-top: 8px; border-top: 2.5px dashed #000000; color: #000000; line-height: 1.35;">
-                    Terima kasih atas kunjungan Anda di 8 Bamboo!<br>
-                    Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄
+                    ${isDirect 
+                        ? 'Terima kasih atas pesanan Anda di 8 Bamboo!<br>Selamat menikmati sajian kami! 🀄' 
+                        : 'Terima kasih atas kunjungan Anda di 8 Bamboo!<br>Selamat menikmati permainan & semoga beruntung di putaran selanjutnya! 🀄'
+                    }
                 </div>
             `;
         }
@@ -2414,7 +2979,8 @@
 
             renderOrdersPage();
             updateOrderBadges();
-            showCustomToast(`Semua pesanan Meja ${booking.table} ditandai Sudah Disajikan!`, "success");
+            const targetName = (booking.isDirectSale || booking.table === 0) ? "Takeaway" : `Meja ${booking.table}`;
+            showCustomToast(`Semua pesanan ${targetName} ditandai Sudah Disajikan!`, "success");
         }
 
         function renderOrdersPage() {
@@ -2480,13 +3046,16 @@
 
                 if (displayedItems.length === 0 && state.ordersFilter !== 'ALL') return;
 
-                const startStr = slotIndexToTime(b.startSlot);
-                const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
+                const isDirect = b.isDirectSale || b.table === 0;
+                const startStr = isDirect ? '-' : slotIndexToTime(b.startSlot);
+                const endStr = isDirect ? '-' : slotIndexToTime(b.startSlot + b.durationSlots);
                 const isPaid = b.status === "COMPLETED" || b.status === "PAID";
                 const hasPendingItems = b.items.some(i => !i.delivered);
 
                 const card = document.createElement('div');
-                card.className = "bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col justify-between transition hover:shadow-md";
+                card.className = `rounded-2xl border shadow-sm p-4 flex flex-col justify-between transition hover:shadow-md ${
+                    isDirect ? 'bg-amber-50/40 border-amber-300' : 'bg-white border-slate-200'
+                }`;
 
                 let itemsHtml = '';
                 b.items.forEach((item, originalIndex) => {
@@ -2495,7 +3064,7 @@
 
                     const isDone = !!item.delivered;
                     itemsHtml += `
-                        <div class="flex items-center justify-between p-2.5 rounded-xl border transition ${isDone ? 'bg-emerald-50/50 border-emerald-200' : 'bg-amber-50/70 border-amber-200'}">
+                        <div class="flex items-center justify-between p-2.5 rounded-xl border transition ${isDone ? 'bg-emerald-50/50 border-emerald-200' : 'bg-white border-slate-200 shadow-sm'}">
                             <div class="flex items-center gap-2.5">
                                 <button onclick="toggleFBItemDelivered('${b.id}', ${originalIndex})" title="Klik untuk ubah status" class="w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs border transition ${isDone ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-amber-500 border-amber-300 hover:border-emerald-500'}">
                                     ${isDone ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-clock"></i>'}
@@ -2505,41 +3074,69 @@
                                     <span class="text-[11px] font-mono text-slate-500 block">x${item.qty} (@ ${formatIDR(item.price)})</span>
                                 </div>
                             </div>
-                            <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${isDone ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-200 text-amber-900 border border-amber-300 animate-pulse'}">
+                            <span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${isDone ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : 'bg-amber-100 text-amber-900 border border-amber-300 animate-pulse'}">
                                 ${isDone ? 'Sudah Keluar' : 'Menunggu'}
                             </span>
                         </div>
                     `;
                 });
 
+                const tableTitle = isDirect
+                    ? `<span class="px-2.5 py-1 rounded-xl bg-amber-500 text-white text-xs font-black shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-bag-shopping"></i> TAKEAWAY / BUNGKUS</span>`
+                    : `<span class="px-2.5 py-1 rounded-xl bg-emerald-600 text-white text-xs font-black shadow-sm flex items-center gap-1.5"><i class="fa-solid fa-chair"></i> DINE-IN (MEJA ${b.table})</span>`;
+
+                const timeSub = isDirect
+                    ? `<span><i class="fa-solid fa-clock mr-1 text-amber-600"></i> ${formatDateTime(b.createdTime)}</span>`
+                    : `<span><i class="fa-solid fa-clock mr-1 text-slate-400"></i> ${startStr} - ${endStr}</span>`;
+
+                const notesBadge = b.notes ? `
+                    <div class="mt-2 p-2 rounded-xl bg-amber-100/70 border border-amber-200 text-[11px] text-amber-950 font-medium">
+                        <i class="fa-solid fa-note-sticky text-amber-600 mr-1"></i> Catatan: <strong>${b.notes}</strong>
+                    </div>
+                ` : '';
+
                 card.innerHTML = `
                     <div>
-                        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-100 gap-2">
                             <div class="flex items-center gap-2">
                                 <span class="w-3 h-3 rounded-full ${hasPendingItems ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}"></span>
-                                <h3 class="font-black text-slate-900 text-base">Meja ${b.table}</h3>
-                                <span class="text-xs font-bold text-slate-600 truncate max-w-[120px]">(${b.name})</span>
+                                ${tableTitle}
                             </div>
                             <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
-                                ${isPaid ? 'Lunas' : 'Main'}
+                                ${isPaid ? 'Lunas' : 'Menunggu'}
                             </span>
                         </div>
-                        <div class="text-[11px] text-slate-500 font-semibold py-1.5 flex items-center justify-between">
-                            <span><i class="fa-solid fa-clock mr-1 text-slate-400"></i> ${startStr} - ${endStr}</span>
-                            <span class="font-mono">#${b.id}</span>
+                        <div class="text-[11px] text-slate-600 font-bold pt-2 flex items-center justify-between">
+                            <span class="truncate max-w-[150px]"><i class="fa-solid fa-user mr-1 text-slate-400"></i>${b.name || 'Pelanggan Langsung'}</span>
+                            <span class="font-mono text-slate-500 font-semibold">#${b.id}</span>
                         </div>
+                        <div class="text-[11px] text-slate-500 font-semibold py-1 flex items-center justify-between">
+                            ${timeSub}
+                        </div>
+                        ${notesBadge}
                         <div class="flex flex-col gap-1.5 mt-2">
                             ${itemsHtml || '<span class="text-xs text-slate-400 italic py-2 text-center">Tidak ada item sesuai filter.</span>'}
                         </div>
                     </div>
 
                     <div class="pt-3 mt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <button onclick="openManageModal('${b.id}')" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5">
-                            <i class="fa-solid fa-receipt"></i> Kelola di POS
-                        </button>
+                        ${isDirect ? `
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="openTakeawayDetailModal('${b.id}')" class="text-xs font-bold text-amber-800 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-xl border border-amber-300 transition flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-info"></i> Detail
+                                </button>
+                                <button onclick="printThermalReceiptById('${b.id}')" class="text-xs font-bold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-xl border border-slate-200 transition" title="Cetak Struk">
+                                    <i class="fa-solid fa-print"></i>
+                                </button>
+                            </div>
+                        ` : `
+                            <button onclick="openManageModal('${b.id}')" class="text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition flex items-center gap-1.5">
+                                <i class="fa-solid fa-receipt"></i> Kelola di POS
+                            </button>
+                        `}
                         ${hasPendingItems ? `
                             <button onclick="setAllTableOrdersDelivered('${b.id}')" class="text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 px-3 py-1.5 rounded-xl shadow-sm transition flex items-center gap-1">
-                                <i class="fa-solid fa-check-double"></i> Selesaikan Semua
+                                <i class="fa-solid fa-check-double"></i> Selesaikan
                             </button>
                         ` : `
                             <span class="text-[11px] text-emerald-700 font-bold flex items-center gap-1">
@@ -2608,7 +3205,7 @@
             if (filteredBookings.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="13" class="py-8 text-center text-slate-400 font-medium">
+                        <td colspan="14" class="py-8 text-center text-slate-400 font-medium">
                             <i class="fa-solid fa-receipt text-3xl mb-2 block opacity-40"></i>
                             Tidak ada transaksi ditemukan untuk rentang tanggal & status ini
                         </td>
@@ -2616,7 +3213,8 @@
                 `;
             } else {
                 filteredBookings.forEach(b => {
-                    const durationHrs = b.durationSlots * 0.25;
+                    const isDirect = b.isDirectSale || b.table === 0;
+                    const durationHrs = isDirect ? 0 : b.durationSlots * 0.25;
                     const isCompleted = b.status === "COMPLETED" || b.status === "PAID";
                     const isCancelled = b.status === "CANCELLED";
 
@@ -2628,32 +3226,42 @@
                         completedCount++;
                     }
 
-                    const startStr = slotIndexToTime(b.startSlot);
-                    const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
+                    const startStr = isDirect ? '-' : slotIndexToTime(b.startSlot);
+                    const endStr = isDirect ? '-' : slotIndexToTime(b.startSlot + b.durationSlots);
 
                     let fbDetailsText = '-';
                     if (b.items && b.items.length > 0) {
                         fbDetailsText = b.items.map(i => `${i.name} (x${i.qty} @ ${formatIDR(i.price)} = ${formatIDR(i.price * i.qty)})`).join('<br>');
                     }
 
-                    const formattedTableFee = formatIDR(totals.tableFee);
+                    const formattedTableFee = isDirect ? '-' : formatIDR(totals.tableFee);
                     
                     let discountParts = [];
                     if (totals.googleDiscountAmt > 0) {
                         discountParts.push(`<span class="text-amber-800 font-semibold">• Ulasan Google: -${formatIDR(totals.googleDiscountAmt)}</span>`);
                     }
-                    if (totals.autoDiscountAmt > 0) {
+                    if (!isDirect && totals.autoDiscountAmt > 0) {
                         discountParts.push(`<span class="text-amber-800 font-semibold">• Durasi Main: -${formatIDR(totals.autoDiscountAmt)}</span>`);
                     }
                     if (totals.totalDiscount > 0) {
                         discountParts.push(`<strong class="text-amber-900 border-t border-amber-200 block mt-0.5 pt-0.5">Total Diskon: -${formatIDR(totals.totalDiscount)}</strong>`);
                     }
-                    if (totals.bookingFee > 0) {
+                    if (!isDirect && totals.bookingFee > 0) {
                         discountParts.push(`<span class="text-emerald-700 font-bold">• DP Meja: -${formatIDR(totals.bookingFee)}</span>`);
                     }
                     const formattedDiscount = discountParts.length > 0 ? discountParts.join('<br>') : '-';
 
                     const formattedFinalTotal = isCancelled ? `<span class="line-through text-slate-400">Rp 0</span>` : formatIDR(totals.finalTotal);
+
+                    const tableCol = isDirect 
+                        ? `<span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-xs"><i class="fa-solid fa-bag-shopping mr-1"></i>Takeaway</span>` 
+                        : `<span class="font-bold text-emerald-700">Meja ${b.table}</span>`;
+
+                    const bookingTimeCol = isDirect
+                        ? `<span class="font-semibold text-slate-700">${b.date} (Langsung)</span>`
+                        : `<span class="font-semibold text-slate-700">${b.date} (${startStr} - ${endStr})</span>`;
+
+                    const durationCol = isDirect ? '-' : `${durationHrs} jam`;
 
                     const tr = document.createElement('tr');
                     tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
@@ -2661,11 +3269,11 @@
                         <td class="py-3.5 px-4 font-mono text-xs font-bold text-slate-500">#${b.id}</td>
                         <td class="py-3.5 px-4 font-bold text-slate-900">${b.name}</td>
                         <td class="py-3.5 px-4 font-mono text-slate-600 text-xs">${b.phone}</td>
-                        <td class="py-3.5 px-4 font-bold text-emerald-700">Meja ${b.table}</td>
-                        <td class="py-3.5 px-4 font-semibold text-slate-700">${b.date} (${startStr} - ${endStr})</td>
+                        <td class="py-3.5 px-4">${tableCol}</td>
+                        <td class="py-3.5 px-4">${bookingTimeCol}</td>
                         <td class="py-3.5 px-4 font-mono text-slate-500 text-xs">${formatDateTime(b.createdTime)}</td>
                         <td class="py-3.5 px-4 font-mono text-slate-500 text-xs">${formatDateTime(b.completedOrCancelledTime)}</td>
-                        <td class="py-3.5 px-4 text-slate-600">${durationHrs} jam</td>
+                        <td class="py-3.5 px-4 text-slate-600">${durationCol}</td>
                         <td class="py-3.5 px-4 text-right font-mono text-slate-500">${formattedTableFee}</td>
                         <td class="py-3.5 px-4 text-left font-mono text-xs text-slate-700">${fbDetailsText}</td>
                         <td class="py-3.5 px-4 text-right font-mono text-xs text-amber-700">${formattedDiscount}</td>
@@ -2677,6 +3285,24 @@
                                 ? `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-300">CANCELLED</span>`
                                 : `<span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300">BOOKED</span>`
                             }
+                        </td>
+                        <td class="py-3.5 px-4 text-center">
+                            <div class="flex items-center justify-center gap-1">
+                                ${isDirect ? `
+                                    <button onclick="openTakeawayDetailModal('${b.id}')" title="Lihat Detail & Kelola" class="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg border border-amber-300 transition text-xs flex items-center gap-1 shadow-sm">
+                                        <i class="fa-solid fa-circle-info"></i> Detail
+                                    </button>
+                                ` : isCompleted ? `
+                                    <button onclick="openManageModal('${b.id}')" title="Lihat Detail Meja" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border border-slate-300 transition text-xs flex items-center gap-1 shadow-sm">
+                                        <i class="fa-solid fa-circle-info text-emerald-600"></i> Detail
+                                    </button>
+                                ` : '-'}
+                                ${isCompleted ? `
+                                    <button onclick="printThermalReceiptById('${b.id}')" title="Cetak Struk Pembayaran" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border border-slate-300 transition text-xs shadow-sm">
+                                        <i class="fa-solid fa-print"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
                         </td>
                     `;
                     tbody.appendChild(tr);
@@ -2712,8 +3338,9 @@
             }
 
             const excelData = filteredBookings.map(b => {
-                const startStr = slotIndexToTime(b.startSlot);
-                const endStr = slotIndexToTime(b.startSlot + b.durationSlots);
+                const isDirect = b.isDirectSale || b.table === 0;
+                const startStr = isDirect ? '-' : slotIndexToTime(b.startSlot);
+                const endStr = isDirect ? '-' : slotIndexToTime(b.startSlot + b.durationSlots);
                 const fbText = b.items && b.items.length > 0 
                     ? b.items.map(i => `${i.name} x${i.qty} (@${i.price})`).join("; ") 
                     : "Tidak ada";
@@ -2724,10 +3351,10 @@
                 if (totals.googleDiscountAmt > 0) {
                     discountExcelParts.push(`Ulasan Google (-${formatIDR(totals.googleDiscountAmt)})`);
                 }
-                if (totals.autoDiscountAmt > 0) {
+                if (!isDirect && totals.autoDiscountAmt > 0) {
                     discountExcelParts.push(`Diskon Durasi (-${formatIDR(totals.autoDiscountAmt)})`);
                 }
-                if (totals.bookingFee > 0) {
+                if (!isDirect && totals.bookingFee > 0) {
                     discountExcelParts.push(`DP Meja (-${formatIDR(totals.bookingFee)})`);
                 }
                 const detailDiskonExcel = discountExcelParts.length > 0 ? discountExcelParts.join("; ") : "Tidak ada";
@@ -2736,11 +3363,11 @@
                     "ID Booking": b.id,
                     "Nama Pelanggan": b.name,
                     "Nomor HP": b.phone,
-                    "Nomor Meja": `Meja ${b.table}`,
-                    "Waktu Booking (Tanggal & Jam)": `${b.date} (${startStr} - ${endStr})`,
+                    "Nomor Meja": isDirect ? "Takeaway (F&B Saja)" : `Meja ${b.table}`,
+                    "Waktu Booking (Tanggal & Jam)": isDirect ? `${b.date} (Beli Langsung)` : `${b.date} (${startStr} - ${endStr})`,
                     "Waktu Dibuat": formatDateTime(b.createdTime),
                     "Waktu Selesai / Batal": formatDateTime(b.completedOrCancelledTime),
-                    "Durasi (Jam)": b.durationSlots * 0.25,
+                    "Durasi (Jam)": isDirect ? 0 : b.durationSlots * 0.25,
                     "Biaya Meja (IDR)": totals.tableFee,
                     "Booking Fee / DP (IDR)": totals.bookingFee,
                     "Rincian F&B / Tambahan": fbText,
