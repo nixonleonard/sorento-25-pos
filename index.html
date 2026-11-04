@@ -444,7 +444,7 @@
                     <div class="bg-amber-50/80 border border-amber-200 rounded-2xl p-3.5 flex items-center justify-between shadow-sm">
                         <div>
                             <span class="text-[11px] font-extrabold text-amber-800 uppercase tracking-wider block">Paket Membership</span>
-                            <span class="text-sm font-black text-amber-900 mt-1 block">Rp 300.000 / 30 Hari</span>
+                            <span class="text-sm font-black text-amber-900 mt-1 block" id="stat-membership-price">Rp 300.000 / 30 Hari</span>
                         </div>
                         <div class="w-11 h-11 rounded-2xl bg-amber-200/80 text-amber-900 flex items-center justify-center text-lg">
                             <i class="fa-solid fa-gem"></i>
@@ -570,16 +570,30 @@
 
                     <div class="pt-4 border-t border-slate-200 flex flex-col gap-4">
                         <h3 class="text-sm font-extrabold text-slate-900 uppercase tracking-wider text-emerald-800">3. Modul & Fitur Opsional</h3>
-                        <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
-                            <div>
-                                <span class="font-bold text-sm text-slate-800 block">Modul Fitur Membership</span>
-                                <span class="text-xs text-slate-500">Tampilkan atau sembunyikan tab keanggotaan member di navigasi kasir</span>
+                        <!-- KARTU PENGATURAN MODUL & TARIF MEMBERSHIP -->
+                        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-2.5">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <span class="font-bold text-sm text-slate-800 block">Modul Fitur Membership</span>
+                                    <span class="text-xs text-slate-500">Tampilkan atau sembunyikan tab keanggotaan member di navigasi kasir</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="setting-membership-enabled" onchange="toggleMembershipSetting()" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
                             </div>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="setting-membership-enabled" onchange="toggleMembershipSetting()" class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                            </label>
+                            <div class="flex items-center justify-between pt-2 border-t border-slate-200 text-xs">
+                                <div>
+                                    <span class="font-bold text-slate-700 block">Tarif Biaya Membership (30 Hari)</span>
+                                    <span class="text-slate-400 text-[11px]">Nominal harga pendaftaran paket member</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-bold text-slate-500">Rp</span>
+                                    <input type="number" id="setting-membership-price" step="5000" min="10000" onchange="saveMembershipPriceSetting(this.value)" class="w-36 bg-white border border-slate-300 rounded-xl px-2.5 py-1.5 text-xs font-bold text-emerald-700 focus:outline-none focus:border-emerald-500 shadow-inner">
+                                </div>
+                            </div>
                         </div>
+
                         <div class="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
                             <div>
                                 <span class="font-bold text-sm text-slate-800 block">Diskon Ulasan Google (5%)</span>
@@ -755,7 +769,7 @@
             <form onsubmit="handleConfirmMemberCheckin(event)" class="p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto">
                 <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-xs text-amber-900 font-medium flex items-center gap-2">
                     <i class="fa-solid fa-gift text-amber-600 text-base shrink-0"></i>
-                    <span>Sewa meja dipotong <strong>2 Jam Gratis (Rp 0)</strong> untuk klaim hari ini.</span>
+                    <span>Sewa meja dipotong <strong>2 Jam Gratis (Rp 0)</strong> • Senin-Kamis (Full Day), Jumat-Minggu (10:00 - 15:00).</span>
                 </div>
 
                 <!-- LANGKAH 1: VERIFIKASI OTP WHATSAPP -->
@@ -787,11 +801,7 @@
                     <div class="flex flex-col gap-1.5 text-xs text-slate-700 font-semibold bg-slate-50 p-3 rounded-2xl border border-slate-200">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox" id="checkin-chk-phone" checked class="w-4 h-4 text-emerald-600 rounded">
-                            <span class="text-slate-800">Nomor HP fisik member telah sesuai</span>
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" id="checkin-chk-order" checked class="w-4 h-4 text-emerald-600 rounded">
-                            <span class="text-emerald-900 font-bold">Wajib beli min. 1 makanan & 1 minuman</span>
+                            <span class="text-slate-800">Nama & nomor WhatsApp member telah sesuai dengan kartu</span>
                         </label>
                     </div>
 
@@ -1057,7 +1067,7 @@
                     </div>
                     <div>
                         <h3 class="font-extrabold text-base">Pendaftaran Member Baru</h3>
-                        <p class="text-xs text-emerald-100">Biaya Rp 300.000 (Masa Aktif 30 Hari)</p>
+                        <p class="text-xs text-emerald-100" id="reg-member-subtitle">Biaya Rp 300.000 (Masa Aktif 30 Hari)</p>
                     </div>
                 </div>
                 <button onclick="closeRegisterMemberModal()" class="w-8 h-8 rounded-full bg-white/20 text-white hover:bg-white/30 flex items-center justify-center transition">
@@ -1078,17 +1088,17 @@
                 </div>
 
                 <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col gap-2 text-xs">
-                    <div class="flex justify-between items-center text-slate-700 font-semibold">
+                    <div class="flex items-center gap-4 text-xs font-semibold">
                         <span>Paket Membership:</span>
                         <span class="font-bold text-slate-900">30-Day Mahjong Pass</span>
                     </div>
-                    <div class="flex justify-between items-center text-slate-700 font-semibold">
+                    <div class="flex items-center gap-4 text-xs font-semibold">
                         <span>Masa Berlaku:</span>
-                        <span class="font-bold text-emerald-800">30 Hari Penuh</span>
+                        <span class="font-bold text-emerald-800">30 Hari (Aktif Setelah Dibayar)</span>
                     </div>
                     <div class="flex justify-between items-center border-t border-emerald-200 pt-2">
                         <span class="font-extrabold text-slate-900 uppercase">Total Biaya:</span>
-                        <span class="text-xl font-black text-emerald-700 font-mono">Rp 300.000</span>
+                        <span class="text-xl font-black text-emerald-700 font-mono" id="modal-reg-price-preview">Rp 300.000</span>
                     </div>
                 </div>
 
@@ -1098,7 +1108,7 @@
                     </button>
                     <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold py-3 rounded-xl transition shadow-md shadow-emerald-600/20 text-xs flex items-center justify-center gap-2">
                         <i class="fa-solid fa-check"></i>
-                        <span>Bayar & Terbitkan Barcode</span>
+                        <span>Daftarkan Member</span>
                     </button>
                 </div>
             </form>
@@ -1132,6 +1142,14 @@
                 <div class="bg-slate-50 rounded-xl p-2.5 w-full text-xs text-slate-600 border border-slate-200 flex justify-between">
                     <span>Berlaku s/d:</span>
                     <span class="font-bold text-emerald-700" id="modal-view-expiry">-</span>
+                </div>
+
+                <!-- Tombol Bayar & Aktifkan Khusus Member Pending -->
+                <div id="modal-view-pending-action" class="w-full hidden">
+                    <button onclick="activateMemberPaymentFromModal()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-sm active:scale-95">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                        <span id="modal-view-pay-btn-text">Bayar & Aktifkan (Rp 300.000)</span>
+                    </button>
                 </div>
 
                 <div class="flex flex-col gap-2 w-full mt-2">
@@ -1490,7 +1508,8 @@
             settings: {
                 googleReviewDiscountEnabled: true,
                 bookingFeeEnabled: false,
-                membershipEnabled: true
+                membershipEnabled: true,
+                membershipPrice: 300000
             },
             currentFBItems: [],
             directSaleItems: [],
@@ -1526,6 +1545,21 @@
         function getHourlyRateForDate(dateStr) {
             const dayKey = getDayKey(dateStr);
             return state.dayRates[dayKey] || 50000;
+        }
+
+        function getMembershipPrice() {
+            return (state.settings && state.settings.membershipPrice) ? state.settings.membershipPrice : 300000;
+        }
+
+        function updateMembershipPriceDisplays() {
+            const price = getMembershipPrice();
+            const formatted = formatIDR(price);
+            const statPrice = document.getElementById('stat-package-price');
+            if (statPrice) statPrice.innerText = `${formatted} / 30 Hari`;
+            const regSub = document.getElementById('reg-modal-subprice');
+            if (regSub) regSub.innerText = `Biaya ${formatted} (Masa Aktif 30 Hari)`;
+            const regTotal = document.getElementById('reg-modal-total-price');
+            if (regTotal) regTotal.innerText = formatted;
         }
 
         function slotIndexToTime(slotIdx) {
@@ -1862,9 +1896,23 @@
 
         // --- SISTEM MEMBERSHIP ---
 
+        function getMembershipPrice() {
+            return (state.settings && state.settings.membershipPrice) ? state.settings.membershipPrice : 300000;
+        }
+
+        function saveMembershipPriceSetting(newVal) {
+            const price = parseInt(newVal) || 300000;
+            state.settings.membershipPrice = price;
+            saveCloudSettings();
+            renderMembersTable();
+            showCustomToast(`Tarif membership diatur ke ${formatIDR(price)}.`, "info");
+        }
+
         function openRegisterMemberModal() {
             if (document.getElementById('reg-member-name')) document.getElementById('reg-member-name').value = '';
             if (document.getElementById('reg-member-phone')) document.getElementById('reg-member-phone').value = '';
+            const previewEl = document.getElementById('modal-reg-price-preview');
+            if (previewEl) previewEl.innerText = formatIDR(getMembershipPrice());
             document.getElementById('modal-register-member')?.classList.remove('hidden');
         }
 
@@ -1879,23 +1927,22 @@
             if (!name || !phone) return;
 
             const now = new Date();
-            const expiry = new Date(now);
-            expiry.setDate(expiry.getDate() + 30);
-
             const randomCode = Math.floor(1000 + Math.random() * 9000);
             const barcodeId = `8BM-${randomCode}`;
+            const fee = getMembershipPrice();
 
+            // Status awal saat pendaftaran adalah PENDING (Menunggu Pembayaran)
             const newMember = {
                 id: "MEM-" + Math.floor(10000 + Math.random() * 90000),
                 barcodeId: barcodeId,
                 name: name,
                 phone: phone,
                 registeredDate: now.toISOString(),
-                expiryDate: expiry.toISOString(),
-                status: "ACTIVE",
+                expiryDate: null, // Masa aktif 30 hari dihitung setelah pembayaran diterima
+                status: "PENDING", // Menunggu Pembayaran
                 lastCheckinDate: null,
                 totalCheckins: 0,
-                pricePaid: 300000
+                pricePaid: fee
             };
 
             state.members.unshift(newMember);
@@ -1903,26 +1950,59 @@
             renderMembersTable();
             closeRegisterMemberModal();
 
+            showCustomToast(`Member ${name} (${barcodeId}) didaftarkan. Status: MENUNGGU BAYAR.`, "info");
+            openCardModal(newMember.id);
+        }
+
+        function activateMemberPayment(memberId) {
+            const member = state.members.find(m => m.id === memberId);
+            if (!member) return;
+
+            const fee = member.pricePaid || getMembershipPrice();
+            const now = new Date();
+            const expiry = new Date(now);
+            expiry.setDate(expiry.getDate() + 30); // 30 hari penuh sejak tanggal pembayaran
+
+            member.status = "ACTIVE";
+            member.paidDate = now.toISOString();
+            member.expiryDate = expiry.toISOString();
+            member.pricePaid = fee;
+
+            saveLocalMembers();
+
+            // Catat transaksi resmi masuk ke omzet harian POS
             const memberTrx = {
                 id: "MEM-REG-" + Math.floor(1000 + Math.random() * 9000),
                 isDirectSale: true,
                 isMembershipTrx: true,
                 date: getTodayISO(),
                 table: 0,
-                name: `🀄 Member Baru: ${name}`,
-                phone: phone,
-                items: [{ id: "M1", name: "Paket 30-Day Membership Pass", price: 300000, qty: 1, delivered: true }],
-                finalTotal: 300000,
+                name: `🀄 Member Baru: ${member.name} (${member.barcodeId})`,
+                phone: member.phone,
+                items: [{ id: "M1", name: "Paket 30-Day Membership Pass", price: fee, qty: 1, delivered: true }],
+                finalTotal: fee,
                 status: "COMPLETED",
-                createdTime: new Date().toISOString(),
-                completedOrCancelledTime: new Date().toISOString()
+                createdTime: now.toISOString(),
+                completedOrCancelledTime: now.toISOString()
             };
+
             state.bookings.push(memberTrx);
             saveCloudBooking(memberTrx);
 
+            renderMembersTable();
             renderTransactions();
-            showCustomToast(`Member ${name} (${barcodeId}) berhasil terdaftar! Rp 300.000 telah masuk omzet.`, "success");
-            openCardModal(newMember.id);
+            printThermalReceipt(memberTrx);
+
+            if (state.activeMemberCardId === memberId) {
+                openCardModal(memberId);
+            }
+
+            showCustomToast(`Pembayaran ${formatIDR(fee)} diterima! Member ${member.name} kini AKTIF 30 hari. Struk dicetak.`, "success");
+        }
+
+        function activateMemberPaymentFromModal() {
+            if (!state.activeMemberCardId) return;
+            activateMemberPayment(state.activeMemberCardId);
         }
 
         let activeCheckinMemberId = null;
@@ -1947,6 +2027,17 @@
         function openMemberCheckinModal(memberId) {
             const member = state.members.find(m => m.id === memberId);
             if (!member) return;
+
+            if (member.status !== "ACTIVE") {
+                showCustomToast(`Member ${member.name} belum aktif. Harap lakukan 'Bayar & Aktifkan' terlebih dahulu!`, "error");
+                return;
+            }
+
+            const now = new Date();
+            if (new Date(member.expiryDate) < now) {
+                showCustomToast(`Masa berlaku member ${member.name} telah kedaluwarsa.`, "error");
+                return;
+            }
 
             const todayISO = getTodayISO();
             if (member.lastCheckinDate === todayISO) {
@@ -2043,20 +2134,34 @@
             document.getElementById('modal-member-checkin')?.classList.add('hidden');
         }
 
+        // PEMBATASAN JAM OPERASIONAL MEMBERSHIP:
+        // SENIN s/d KAMIS: 10:00 - 00:00 WIB (Slot 0 s/d 56)
+        // JUMAT s/d MINGGU: 10:00 - 15:00 WIB (Slot 0 s/d 20)
         function populateCheckinStartSlots() {
             const select = document.getElementById('checkin-start-slot');
             if (!select) return;
             select.innerHTML = '';
+
+            const dayKey = getDayKey(state.selectedDate);
+            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+            const maxAllowedSlot = isWeekend ? 20 : 56; // 20 = 15:00 (3 sore), 56 = 00:00 (tengah malam)
 
             const currentSlot = getCurrentSlotIndex();
 
             for (let s = 0; s < TOTAL_SLOTS; s++) {
                 const opt = document.createElement('option');
                 opt.value = s;
-                opt.innerText = slotIndexToTime(s);
-                if (s === currentSlot) {
-                    opt.selected = true;
-                    opt.innerText += " (Saat Ini)";
+                const timeStr = slotIndexToTime(s);
+
+                if (s > maxAllowedSlot) {
+                    opt.disabled = true;
+                    opt.innerText = `${timeStr} (Di luar jam member: maks ${isWeekend ? '15:00' : '00:00'})`;
+                } else {
+                    opt.innerText = timeStr;
+                    if (s === currentSlot && currentSlot <= maxAllowedSlot) {
+                        opt.selected = true;
+                        opt.innerText += " (Saat Ini)";
+                    }
                 }
                 select.appendChild(opt);
             }
@@ -2095,6 +2200,15 @@
             const table = parseInt(document.getElementById('checkin-table-select').value);
             const startSlot = parseInt(document.getElementById('checkin-start-slot').value);
             const durationSlots = parseInt(document.getElementById('checkin-duration-slots').value);
+
+            const dayKey = getDayKey(state.selectedDate);
+            const isWeekend = ['Fri', 'Sat', 'Sun'].includes(dayKey);
+            const maxAllowedSlot = isWeekend ? 20 : 56;
+
+            if (startSlot > maxAllowedSlot) {
+                showCustomToast(isWeekend ? "Sesi member Jumat-Minggu hanya berlaku sampai jam 15:00 WIB (3 Sore)." : "Sesi member Senin-Kamis hanya berlaku sampai jam 00:00 WIB.", "error");
+                return;
+            }
 
             const endSlot = startSlot + durationSlots;
             if (endSlot > TOTAL_SLOTS) {
@@ -2200,10 +2314,10 @@
 
                 <div style="border-top: 2.5px dashed #000000; margin: 8px 0;"></div>
 
-                <div style="font-size: 16.5px; font-weight: 700; color: #000000; line-height: 1.35;">
+                <div style="font-size: 16px; font-weight: 700; color: #000000; line-height: 1.35;">
                     * Status OTP: TERVERIFIKASI<br>
                     * Biaya Meja: Rp 0 (Free 2 Jam)<br>
-                    * Catatan: Wajib beli min 1 makanan & 1 minuman di kasir.
+                    * Jam Member: Sen-Kam 10:00-00:00, Jum-Min 10:00-15:00
                 </div>
 
                 <div style="font-size: 17.5px; font-weight: 700; text-align: center; margin-top: 10px; padding-top: 8px; border-top: 2.5px dashed #000000; color: #000000;">
@@ -2283,7 +2397,7 @@
 
             let activeCount = 0;
             state.members.forEach(m => {
-                if (new Date(m.expiryDate) >= now) activeCount++;
+                if (m.status === 'ACTIVE' && m.expiryDate && new Date(m.expiryDate) >= now) activeCount++;
             });
 
             if (document.getElementById('stat-total-count')) document.getElementById('stat-total-count').innerText = state.members.length;
@@ -2295,25 +2409,47 @@
             }
 
             filtered.forEach(m => {
-                const exp = new Date(m.expiryDate);
-                const isExpired = exp < now;
+                const isPending = m.status === 'PENDING' || !m.status;
+                const exp = m.expiryDate ? new Date(m.expiryDate) : null;
+                const isExpired = exp ? exp < now : false;
                 const isClaimedToday = m.lastCheckinDate === todayISO;
-                const diffDays = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
-                const remainingText = isExpired ? 'Kedaluwarsa' : `${diffDays} hari lagi`;
+                const diffDays = exp ? Math.ceil((exp - now) / (1000 * 60 * 60 * 24)) : 0;
+                const remainingText = isPending ? 'Menunggu Pembayaran' : isExpired ? 'Kedaluwarsa' : `${diffDays} hari lagi`;
 
-                const checkinBtnHtml = isExpired ? `
-                    <span class="text-[10px] text-rose-500 font-bold">Kartu Expired</span>
-                ` : isClaimedToday ? `
-                    <span class="px-2 py-1 bg-amber-50 text-amber-800 font-bold rounded-xl border border-amber-200 text-[10px] inline-flex items-center gap-1">
-                        <i class="fa-solid fa-circle-check text-amber-600"></i>
-                        <span>Sudah Klaim Hari Ini</span>
-                    </span>
-                ` : `
-                    <button onclick="openMemberCheckinModal('${m.id}')" title="Klaim 2 Jam Free Sewa Meja" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition text-xs inline-flex items-center gap-1.5 shadow-sm active:scale-95">
-                        <i class="fa-solid fa-play"></i>
-                        <span>Klaim 2j Free</span>
-                    </button>
-                `;
+                let statusBadgeHtml = '';
+                if (isPending) {
+                    statusBadgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase font-mono bg-amber-100 text-amber-900 border border-amber-300">MENUNGGU BAYAR</span>`;
+                } else if (isExpired) {
+                    statusBadgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase font-mono bg-rose-100 text-rose-800 border border-rose-300">EXPIRED</span>`;
+                } else {
+                    statusBadgeHtml = `<span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase font-mono bg-emerald-100 text-emerald-800 border border-emerald-300">AKTIF</span>`;
+                }
+
+                let checkinBtnHtml = '';
+                if (isPending) {
+                    checkinBtnHtml = `
+                        <button onclick="activateMemberPayment('${m.id}')" title="Terima Pembayaran & Aktifkan Member" class="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold rounded-xl transition text-xs inline-flex items-center gap-1 shadow-sm active:scale-95">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                            <span>Bayar & Aktifkan</span>
+                        </button>
+                    `;
+                } else if (isExpired) {
+                    checkinBtnHtml = `<span class="text-[10px] text-rose-500 font-bold">Kartu Expired</span>`;
+                } else if (isClaimedToday) {
+                    checkinBtnHtml = `
+                        <span class="px-2 py-1 bg-amber-50 text-amber-800 font-bold rounded-xl border border-amber-200 text-[10px] inline-flex items-center gap-1">
+                            <i class="fa-solid fa-circle-check text-amber-600"></i>
+                            <span>Sudah Klaim Hari Ini</span>
+                        </span>
+                    `;
+                } else {
+                    checkinBtnHtml = `
+                        <button onclick="openMemberCheckinModal('${m.id}')" title="Klaim 2 Jam Free Sewa Meja" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl transition text-xs inline-flex items-center gap-1.5 shadow-sm active:scale-95">
+                            <i class="fa-solid fa-play"></i>
+                            <span>Klaim 2j Free</span>
+                        </button>
+                    `;
+                }
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
@@ -2323,13 +2459,11 @@
                     <td class="p-3.5 font-mono text-slate-600">${m.phone}</td>
                     <td class="p-3.5 text-slate-500">${m.registeredDate ? m.registeredDate.split('T')[0] : '-'}</td>
                     <td class="p-3.5">
-                        <span class="block font-semibold text-slate-700">${m.expiryDate ? m.expiryDate.split('T')[0] : '-'}</span>
-                        <span class="text-[10px] font-bold ${isExpired ? 'text-rose-600' : 'text-emerald-700'}">${remainingText}</span>
+                        <span class="block font-semibold text-slate-700">${m.expiryDate ? m.expiryDate.split('T')[0] : 'Belum Aktif'}</span>
+                        <span class="text-[10px] font-bold ${isPending ? 'text-amber-700' : isExpired ? 'text-rose-600' : 'text-emerald-700'}">${remainingText}</span>
                     </td>
                     <td class="p-3.5 text-center">
-                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase font-mono ${isExpired ? 'bg-rose-100 text-rose-800 border border-rose-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'}">
-                            ${isExpired ? 'EXPIRED' : 'AKTIF'}
-                        </span>
+                        ${statusBadgeHtml}
                     </td>
                     <td class="p-3.5 text-center">
                         <div class="flex items-center justify-center gap-1.5">
@@ -2357,7 +2491,19 @@
             document.getElementById('modal-view-name').innerText = member.name;
             document.getElementById('modal-view-phone').innerText = member.phone;
             document.getElementById('modal-view-barcode-text').innerText = member.barcodeId;
-            document.getElementById('modal-view-expiry').innerText = member.expiryDate.split('T')[0];
+            document.getElementById('modal-view-expiry').innerText = member.expiryDate ? member.expiryDate.split('T')[0] : 'Menunggu Pembayaran (Belum Aktif)';
+
+            // Jika masih pending pembayaran, munculkan tombol Bayar & Aktifkan di modal kartu
+            const pendingBox = document.getElementById('modal-view-pending-action');
+            const payBtnText = document.getElementById('modal-view-pay-btn-text');
+            if (pendingBox) {
+                if (member.status === 'PENDING') {
+                    pendingBox.classList.remove('hidden');
+                    if (payBtnText) payBtnText.innerText = `Bayar & Aktifkan (${formatIDR(member.pricePaid || getMembershipPrice())})`;
+                } else {
+                    pendingBox.classList.add('hidden');
+                }
+            }
 
             try {
                 if (window.JsBarcode) {
@@ -2386,8 +2532,23 @@
             if (!member) return;
 
             const cleanPhone = cleanPhoneForWhatsApp(member.phone);
-            const expStr = member.expiryDate.split('T')[0];
-            const msg = `*KARTU MEMBERSHIP 8 BAMBOO*\n\nHalo kak *${member.name}*,\nSelamat! Membership Anda telah aktif.\n\n*KODE BARCODE: ${member.barcodeId}*\n*Masa Berlaku s/d: ${expStr}*\n\nSimpan pesan ini dan tunjukkan saat kedatangan di kasir untuk klaim 2 Jam Free sewa meja. Terima kasih! 🀄`;
+            const expStr = member.expiryDate ? member.expiryDate.split('T')[0] : 'Menunggu Pembayaran';
+            const feeStr = formatIDR(member.pricePaid || getMembershipPrice());
+
+            const msg = `*KARTU MEMBERSHIP 8 BAMBOO*\n\n` +
+                `Halo kak *${member.name}*,\n` +
+                `Status: *${member.status === 'ACTIVE' ? 'AKTIF' : 'MENUNGGU PEMBAYARAN'}*\n` +
+                `Kode Barcode: *${member.barcodeId}*\n` +
+                `Masa Berlaku: *s/d ${expStr}*\n\n` +
+                `🀄 *BENEFIT & SYARAT KETENTUAN (S&K):*\n` +
+                `1.⁠ ⁠*Free Bermain 2 Jam Setiap Hari* (1x klaim free per hari untuk 1 meja).\n` +
+                `2.⁠ ⁠*Masa Aktif 1 Bulan Penuh* (30 hari sejak tanggal aktivasi pembayaran).\n` +
+                `3.⁠ ⁠*Wajib Sesuai Nama*: Klaim free hanya berlaku untuk orang yang sesuai dengan nama terdaftar di kartu membership.\n` +
+                `4.⁠ ⁠*Jam Operasional Membership:*\n` +
+                `   - *Senin s/d Kamis*: 10:00 - 00:00 WIB\n` +
+                `   - *Jumat s/d Minggu*: 10:00 - 15:00 WIB (10 pagi - 3 sore)\n` +
+                `5.⁠ ⁠*Kelebihan Jam*: Waktu bermain melebihi 2 jam free dikenakan tarif sewa reguler meja.\n\n` +
+                `Tunjukkan barcode ini kepada kasir saat kedatangan. Selamat bermain & semoga beruntung! 🀄`;
 
             const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
             window.open(url, '_blank');
@@ -2403,12 +2564,13 @@
             if (!printContainer) return;
 
             const expDateStr = member.expiryDate ? member.expiryDate.split('T')[0] : '-';
+            const price = state.settings.membershipPrice || 300000;
 
             printContainer.innerHTML = `
                 <div style="text-align: center; margin-bottom: 8px;">
                     <div style="font-size: 30px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; color: #000000;">🀄 8 BAMBOO 🀄</div>
                     <div style="font-size: 16.5px; font-weight: 700; color: #000000; margin-top: 3px;">KARTU MEMBERSHIP RESMI</div>
-                    <div style="font-size: 15px; font-weight: 700; color: #000000;">Rp 300.000 / 30 Hari</div>
+                    <div style="font-size: 15px; font-weight: 700; color: #000000;">${formatIDR(price)} / 30 Hari</div>
                 </div>
 
                 <div style="border-top: 2.5px dashed #000000; margin: 8px 0;"></div>
@@ -2432,9 +2594,16 @@
 
                 <div style="border-top: 2.5px dashed #000000; margin: 8px 0;"></div>
 
-                <div style="font-size: 16.5px; font-weight: 700; color: #000000; line-height: 1.35;">
-                    * BENEFIT: Free main 2 jam/hari (1 meja)<br>
-                    * Tunjukkan kartu ini saat datang di kasir.
+                <div style="font-size: 15.5px; font-weight: 700; color: #000000; line-height: 1.35;">
+                    * BENEFIT & S&K:<br>
+                    1. Free Main 2 Jam Setiap Hari (1 meja/hari)<br>
+                    2. Masa aktif 1 bulan (30 hari)<br>
+                    3. Wajib sesuai nama kartu member<br>
+                    4. Jam Membership:<br>
+                       - Senin s/d Kamis: 10:00 - 02:00 WIB (Full Day)<br>
+                       - Jumat s/d Minggu: 10:00 - 15:00 WIB (3 Sore)<br>
+                    5. Kelebihan jam dikenakan tarif sewa reguler<br>
+                    * Tunjukkan barcode ini saat datang di kasir.
                 </div>
 
                 <div style="font-size: 17.5px; font-weight: 700; text-align: center; margin-top: 10px; padding-top: 8px; border-top: 2.5px dashed #000000; color: #000000;">
@@ -4244,6 +4413,16 @@
             showCustomToast(state.settings.membershipEnabled ? "Modul Membership diaktifkan." : "Modul Membership disembunyikan.", "info");
         }
 
+        function saveMembershipPriceSetting(val) {
+            const price = parseFloat(val) || 300000;
+            if (!state.settings) state.settings = {};
+            state.settings.membershipPrice = price;
+            saveCloudSettings();
+            updateMembershipPriceDisplays();
+            renderMembersTable();
+            showCustomToast(`Tarif membership berhasil diatur ke ${formatIDR(price)} / 30 hari.`, "success");
+        }
+
         function updateMembershipNavVisibility() {
             const navBtn = document.getElementById('nav-membership');
             const enabled = state.settings && state.settings.membershipEnabled !== false;
@@ -4277,6 +4456,9 @@
 
                 const chkMembership = document.getElementById('setting-membership-enabled');
                 if (chkMembership) chkMembership.checked = state.settings.membershipEnabled !== false;
+
+                const inpMemPrice = document.getElementById('setting-membership-price');
+                if (inpMemPrice) inpMemPrice.value = getMembershipPrice();
 
                 const chkGoogle = document.getElementById('setting-google-discount-enabled');
                 if (chkGoogle) chkGoogle.checked = !!state.settings.googleReviewDiscountEnabled;
@@ -4329,6 +4511,13 @@
                 newDayRates[day] = val > 0 ? val : (state.dayRates[day] || 50000);
             });
             state.dayRates = newDayRates;
+
+            const memPrice = parseFloat(document.getElementById('setting-membership-price')?.value);
+            if (memPrice && memPrice > 0) {
+                state.settings.membershipPrice = memPrice;
+                const statPrice = document.getElementById('stat-membership-price');
+                if (statPrice) statPrice.innerText = `${formatIDR(memPrice)} / 30 Hari`;
+            }
 
             const newCashierPin = document.getElementById('setting-new-cashier-pin')?.value.trim();
             const confirmCashierPin = document.getElementById('setting-confirm-cashier-pin')?.value.trim();
