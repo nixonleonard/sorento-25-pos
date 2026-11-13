@@ -4566,6 +4566,202 @@
             if (document.getElementById('trans-count-badge')) document.getElementById('trans-count-badge').innerText = `${filteredBookings.length} item`;
         }
 
+        function exportTransactionsToExcel() {
+            try {
+                const startDate = document.getElementById('trans-start-date')?.value || state.selectedDate || getTodayISO();
+                const endDate = document.getElementById('trans-end-date')?.value || state.selectedDate || getTodayISO();
+                const statusFilter = document.getElementById('trans-filter-status')?.value || 'ALL';
+
+                let filteredBookings = state.bookings.filter(b => b.date >= startDate && b.date <= endDate);
+
+                if (statusFilter !== 'ALL') {
+                    if (statusFilter === 'COMPLETED') {
+                        filteredBookings = filteredBookings.filter(b => b.status === 'COMPLETED' || b.status === 'PAID');
+                    } else if (statusFilter === 'BOOKED') {
+                        filteredBookings = filteredBookings.filter(b => b.status === 'BOOKED');
+                    } else if (statusFilter === 'CANCELLED') {
+                        filteredBookings = filteredBookings.filter(b => b.status === 'CANCELLED');
+                    }
+                }
+
+                if (filteredBookings.length === 0) {
+                    showCustomToast("Tidak ada transaksi untuk diekspor pada rentang tanggal & status ini.", "error");
+                    return;
+                }
+
+                let grandTotalOmzet = 0;
+                let grandTotalDurasi = 0;
+
+                const excelData = filteredBookings.map(b => {
+                    const isDirect = b.isDirectSale || b.table === 0;
+                    const isCompleted = b.status === "COMPLETED" || b.status === "PAID";
+                    const isCancelled = b.status === "CANCELLED";
+
+                    const startStr = isDirect ? '-' : slotIndexToTime(b.startSlot);
+                    const endStr = isDirect ? '-' : slotIndexToTime(b.startSlot + b.durationSlots);
+                    const durationHrs = isDirect ? 0 : (b.durationSlots || 0) * 0.25;
+
+                    const fbText = b.items && b.items.length > 0
+                        ? b.items.map(i => `${i.name} x${i.qty} (@${i.price})`).join("; ")
+                        : "Tidak ada";
+
+                    const totals = calculateBookingTotals(b);
+                    const finalPay = isCancelled ? 0 : totals.finalTotal;
+
+                    if (isCompleted) {
+                        grandTotalOmzet += finalPay;
+                        grandTotalDurasi += durationHrs;
+                    }
+
+                    let jenisLayanan = "Sewa Meja Reguler";
+                    if (b.isMembershipTrx) {
+                        jenisLayanan = "Pendaftaran Membership";
+                    } else if (isDirect) {
+                        jenisLayanan = "Takeaway (F&B Saja)";
+                    } else if (b.isMemberFree) {
+                        jenisLayanan = "Sewa Meja (Member 2j Free)";
+                    }
+
+                    let nomorMejaLabel = `Meja ${b.table}`;
+                    if (b.isMembershipTrx) {
+                        nomorMejaLabel = "Membership Pass";
+                    } else if (isDirect) {
+                        nomorMejaLabel = "Takeaway";
+                    }
+
+                    let waktuBookingLabel = `${b.date} (${startStr} - ${endStr})`;
+                    if (b.isMembershipTrx) {
+                        waktuBookingLabel = `${b.date} (Aktivasi Member)`;
+                    } else if (isDirect) {
+                        waktuBookingLabel = `${b.date} (Beli Langsung)`;
+                    }
+
+                    let discountExcelParts = [];
+                    if (totals.googleDiscountAmt > 0) {
+                        discountExcelParts.push(`Ulasan Google (-${formatIDR(totals.googleDiscountAmt)})`);
+                    }
+                    if (!isDirect && totals.autoDiscountAmt > 0) {
+                        discountExcelParts.push(`Diskon Durasi (-${formatIDR(totals.autoDiscountAmt)})`);
+                    }
+                    if (!isDirect && totals.bookingFee > 0) {
+                        discountExcelParts.push(`DP Meja (-${formatIDR(totals.bookingFee)})`);
+                    }
+                    const detailDiskonExcel = discountExcelParts.length > 0 ? discountExcelParts.join("; ") : "Tidak ada";
+
+                    return {
+                        "ID Transaksi": b.id,
+                        "Jenis Layanan": jenisLayanan,
+                        "Nama Pelanggan": b.name,
+                        "Nomor HP": b.phone,
+                        "Nomor Meja": nomorMejaLabel,
+                        "Waktu Booking (Tanggal & Jam)": waktuBookingLabel,
+                        "Waktu Dibuat": formatDateTime(b.createdTime),
+                        "Waktu Selesai / Batal": formatDateTime(b.completedOrCancelledTime),
+                        "Durasi (Jam)": durationHrs,
+                        "Biaya Meja (IDR)": totals.tableFee,
+                        "Booking Fee / DP (IDR)": totals.bookingFee,
+                        "Rincian F&B / Item": fbText,
+                        "Rincian Diskon & DP": detailDiskonExcel,
+                        "Total Diskon (IDR)": totals.totalDiscount,
+                        "Total Bayar (IDR)": finalPay,
+                        "Status Transaksi": b.status,
+                        "Catatan": b.notes || ""
+                    };
+                });
+
+                // Tambahkan baris ringkasan total di bagian bawah laporan
+                excelData.push({
+                    "ID Transaksi": "TOTAL LUNAS",
+                    "Jenis Layanan": `${filteredBookings.filter(b => b.status === 'COMPLETED' || b.status === 'PAID').length} Transaksi Selesai`,
+                    "Nama Pelanggan": "",
+                    "Nomor HP": "",
+                    "Nomor Meja": "",
+                    "Waktu Booking (Tanggal & Jam)": `${startDate} s/d ${endDate}`,
+                    "Waktu Dibuat": "",
+                    "Waktu Selesai / Batal": "",
+                    "Durasi (Jam)": grandTotalDurasi,
+                    "Biaya Meja (IDR)": "",
+                    "Booking Fee / DP (IDR)": "",
+                    "Rincian F&B / Item": "",
+                    "Rincian Diskon & DP": "",
+                    "Total Diskon (IDR)": "",
+                    "Total Bayar (IDR)": grandTotalOmzet,
+                    "Status Transaksi": "COMPLETED",
+                    "Catatan": ""
+                });
+
+                const fileName = `Transaksi_8Bamboo_${startDate}_sd_${endDate}.xlsx`;
+
+                // Jika library SheetJS (XLSX) tersedia, buat file .xlsx asli
+                if (typeof XLSX !== 'undefined') {
+                    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+                    // Atur lebar kolom agar rapi saat dibuka di Excel
+                    worksheet['!cols'] = [
+                        { wch: 16 }, // ID Transaksi
+                        { wch: 24 }, // Jenis Layanan
+                        { wch: 24 }, // Nama Pelanggan
+                        { wch: 16 }, // Nomor HP
+                        { wch: 16 }, // Nomor Meja
+                        { wch: 26 }, // Waktu Booking
+                        { wch: 18 }, // Waktu Dibuat
+                        { wch: 18 }, // Waktu Selesai / Batal
+                        { wch: 13 }, // Durasi
+                        { wch: 16 }, // Biaya Meja
+                        { wch: 18 }, // Booking Fee
+                        { wch: 36 }, // Rincian F&B
+                        { wch: 28 }, // Rincian Diskon
+                        { wch: 16 }, // Total Diskon
+                        { wch: 18 }, // Total Bayar
+                        { wch: 16 }, // Status
+                        { wch: 25 }  // Catatan
+                    ];
+
+                    const workbook = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Transaksi");
+
+                    // Gunakan Blob download agar kompatibel di semua browser & webview
+                    const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 200);
+
+                    showCustomToast(`Berhasil mengekspor ${filteredBookings.length} transaksi ke Excel!`, "success");
+                } else {
+                    // Fallback unduhan CSV jika perangkat dalam mode offline penuh tanpa cache CDN XLSX
+                    const headers = Object.keys(excelData[0]);
+                    const csvRows = [
+                        headers.join(","),
+                        ...excelData.map(row => headers.map(h => `"${String(row[h] ?? '').replace(/"/g, '""')}"`).join(","))
+                    ];
+                    const csvBlob = new Blob(["\uFEFF" + csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(csvBlob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName.replace('.xlsx', '.csv');
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 200);
+
+                    showCustomToast(`Berhasil mengekspor ${filteredBookings.length} transaksi (Format CSV Offline)!`, "success");
+                }
+            } catch (err) {
+                console.error("Gagal mengekspor transaksi ke Excel:", err);
+                showCustomToast("Terjadi kesalahan saat mengekspor file Excel.", "error");
+            }
+        }
+
         function toggleMembershipSetting() {
             const chk = document.getElementById('setting-membership-enabled');
             state.settings.membershipEnabled = !!chk?.checked;
