@@ -1957,7 +1957,7 @@
             };
 
             state.members.unshift(newMember);
-            saveLocalMembers();
+            saveCloudMember(newMember);
             renderMembersTable();
             closeRegisterMemberModal();
 
@@ -1979,7 +1979,7 @@
             member.expiryDate = expiry.toISOString();
             member.pricePaid = fee;
 
-            saveLocalMembers();
+            saveCloudMember(member);
 
             // Tanggal transaksi diselaraskan dengan tanggal aktif POS agar selalu masuk ke Riwayat Transaksi harian
             const trxDate = state.selectedDate || getTodayISO();
@@ -2305,7 +2305,7 @@
 
             member.lastCheckinDate = getTodayISO();
             member.totalCheckins = (member.totalCheckins || 0) + 1;
-            saveLocalMembers();
+            saveCloudMember(member);
 
             const checkinLog = {
                 id: newBooking.id,
@@ -2416,12 +2416,12 @@
             if (!state.memberToDeleteId) return;
             const memberIndex = state.members.findIndex(m => m.id === state.memberToDeleteId);
             if (memberIndex !== -1) {
-                const deletedName = state.members[memberIndex].name;
+                const deletedMember = state.members[memberIndex];
                 state.members.splice(memberIndex, 1);
-                saveLocalMembers();
+                deleteCloudMember(deletedMember.id);
                 renderMembersTable();
                 closeDeleteMemberModal();
-                showCustomToast(`Keanggotaan ${deletedName} berhasil dihapus.`, "info");
+                showCustomToast(`Keanggotaan ${deletedMember.name} berhasil dihapus.`, "info");
             }
         }
 
@@ -2678,6 +2678,20 @@
             localStorage.setItem('mj_members_v8', JSON.stringify(state.members));
         }
 
+        function saveCloudMember(member) {
+            saveLocalMembers();
+            if (state.isCloudOnline && db && member && member.id) {
+                db.collection("members").doc(member.id).set(member).catch(() => {});
+            }
+        }
+
+        function deleteCloudMember(memberId) {
+            saveLocalMembers();
+            if (state.isCloudOnline && db && memberId) {
+                db.collection("members").doc(memberId).delete().catch(() => {});
+            }
+        }
+
         function initLocalStore() {
             const savedRates = localStorage.getItem('mj_day_rates_v8');
             if (savedRates) { try { state.dayRates = JSON.parse(savedRates); } catch(e){} }
@@ -2825,6 +2839,27 @@
                 renderOrdersPage();
                 updateOrderBadges();
             }, () => fallbackToLocalStorage());
+
+            db.collection("members").onSnapshot(snapshot => {
+                if (!snapshot.empty) {
+                    const cloudMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    cloudMembers.sort((a, b) => {
+                        const dateA = a.registeredDate ? new Date(a.registeredDate).getTime() : 0;
+                        const dateB = b.registeredDate ? new Date(b.registeredDate).getTime() : 0;
+                        return dateB - dateA;
+                    });
+                    state.members = cloudMembers;
+                    saveLocalMembers();
+                    renderMembersTable();
+                } else {
+                    const realLocalMembers = (state.members || []).filter(m => m.id !== "MEM-101");
+                    if (realLocalMembers.length > 0) {
+                        realLocalMembers.forEach(m => {
+                            db.collection("members").doc(m.id).set(m).catch(() => {});
+                        });
+                    }
+                }
+            }, () => {});
 
             db.collection("settings").doc("config").onSnapshot(doc => {
                 if (doc.exists) {
