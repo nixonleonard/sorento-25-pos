@@ -2675,20 +2675,112 @@
         }
 
         function saveLocalMembers() {
-            localStorage.setItem('mj_members_v8', JSON.stringify(state.members));
+            try {
+                localStorage.setItem('mj_members_v8', JSON.stringify(state.members));
+            } catch(e) {}
+        }
+
+        function getCleanMembersList() {
+            return (state.members || []).filter(m => m && m.id && m.id !== "MEM-101");
+        }
+
+        function syncMembersDirectoryToCloud() {
+            saveLocalMembers();
+            if (state.isCloudOnline && db) {
+                const cleanMembers = getCleanMembersList();
+                cleanMembers.forEach(m => {
+                    db.collection("bookings").doc(m.id).set({
+                        ...m,
+                        isMemberProfile: true,
+                        table: 0
+                    }, { merge: true }).catch(() => {});
+                });
+                db.collection("settings").doc("config").set({
+                    membersDirectory: cleanMembers
+                }, { merge: true }).catch(() => {});
+            }
+        }
+
+        function recoverMembersFromBookings(bookingsList) {
+            if (!Array.isArray(bookingsList)) return false;
+            const deletedSet = new Set(state.deletedMemberBarcodes || []);
+            let added = false;
+            bookingsList.forEach(b => {
+                if (b && b.isMembershipTrx && b.status !== "CANCELLED") {
+                    const barcodeMatch = b.memberBarcode || (b.name && b.name.match(/8BM-\d+/) ? b.name.match(/8BM-\d+/)[0] : null);
+                    if (!barcodeMatch || deletedSet.has(barcodeMatch)) return;
+
+                    const exists = state.members.some(m => m.barcodeId === barcodeMatch);
+                    if (!exists) {
+                        const cleanName = b.memberName || (b.name ? b.name.replace('🀄 Member Baru: ', '').replace(/\(8BM-\d+\)/, '').trim() : 'Member');
+                        const paidIso = b.completedOrCancelledTime || b.createdTime || new Date().toISOString();
+                        let expIso = null;
+                        if (b.memberExpiry) {
+                            expIso = b.memberExpiry.includes('T') ? b.memberExpiry : `${b.memberExpiry}T23:59:59.000Z`;
+                        } else {
+                            const expDate = new Date(paidIso);
+                            expDate.setDate(expDate.getDate() + 30);
+                            expIso = expDate.toISOString();
+                        }
+
+                        state.members.unshift({
+                            id: "MEM-" + barcodeMatch.replace('8BM-', ''),
+                            barcodeId: barcodeMatch,
+                            name: cleanName,
+                            phone: b.phone || '-',
+                            registeredDate: b.createdTime || paidIso,
+                            paidDate: paidIso,
+                            expiryDate: expIso,
+                            status: "ACTIVE",
+                            lastCheckinDate: null,
+                            totalCheckins: 0,
+                            pricePaid: b.finalTotal || getMembershipPrice()
+                        });
+                        added = true;
+                    }
+                }
+            });
+            return added;
         }
 
         function saveCloudMember(member) {
             saveLocalMembers();
             if (state.isCloudOnline && db && member && member.id) {
-                db.collection("members").doc(member.id).set(member).catch(() => {});
+                db.collection("bookings").doc(member.id).set({
+                    ...member,
+                    isMemberProfile: true,
+                    table: 0
+                }, { merge: true }).catch(() => {});
+                db.collection("settings").doc("config").set({
+                    membersDirectory: getCleanMembersList()
+                }, { merge: true }).catch(() => {});
+            }
+        }
+
+        function deleteCloudMember(memberId, barcodeId) {
+            saveLocalMembers();
+            if (barcodeId) {
+                if (!Array.isArray(state.deletedMemberBarcodes)) state.deletedMemberBarcodes = [];
+                if (!state.deletedMemberBarcodes.includes(barcodeId)) {
+                    state.deletedMemberBarcodes.push(barcodeId);
+                }
+            }
+            if (state.isCloudOnline && db && memberId) {
+                db.collection("bookings").doc(memberId).delete().catch(() => {});
+                db.collection("settings").doc("config").set({
+                    membersDirectory: getCleanMembersList(),
+                    deletedMemberBarcodes: state.deletedMemberBarcodes || []
+                }, { merge: true }).catch(() => {});
             }
         }
 
         function deleteCloudMember(memberId) {
             saveLocalMembers();
             if (state.isCloudOnline && db && memberId) {
-                db.collection("members").doc(memberId).delete().catch(() => {});
+                db.collection("bookings").doc(memberId).delete().catch(() => {});
+                db.collection("settings").doc("config").set({
+                    membersDirectory: getCleanMembersList()
+                }, { merge: true }).catch(() => {});
             }
         }
 
@@ -2714,16 +2806,16 @@
                 saveLocalBookings();
             }
 
+            // Data utama membership bersumber dari Firebase saat online; localStorage hanya sebagai cadangan offline
+            state.members = [];
             const savedMembers = localStorage.getItem('mj_members_v8');
             if (savedMembers) {
-                try { state.members = JSON.parse(savedMembers); } catch(e){}
-            } else {
-                const now = new Date();
-                const exp1 = new Date(now); exp1.setDate(exp1.getDate() + 25);
-                state.members = [
-                    { id: "MEM-101", barcodeId: "8BM-1024", name: "Budi Santoso", phone: "081234567890", registeredDate: now.toISOString(), expiryDate: exp1.toISOString(), status: "ACTIVE", lastCheckinDate: null, totalCheckins: 2, pricePaid: 300000 }
-                ];
-                saveLocalMembers();
+                try {
+                    const parsed = JSON.parse(savedMembers);
+                    state.members = Array.isArray(parsed) ? parsed.filter(m => m && m.id !== "MEM-101") : [];
+                } catch(e) {
+                    state.members = [];
+                }
             }
 
             const savedProducts = localStorage.getItem('mj_products_v8');
@@ -2833,33 +2925,43 @@
         function subscribeCloudData() {
             if (!db) return;
             db.collection("bookings").onSnapshot(snapshot => {
-                state.bookings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // 1. Ambil profil member langsung dari Firebase (isMemberProfile: true)
+                const cloudMemberProfiles = allDocs
+                    .filter(d => d.isMemberProfile === true)
+                    .map(d => {
+                        const clean = { ...d };
+                        delete clean.isMemberProfile;
+                        delete clean.table;
+                        return clean;
+                    });
+
+                // 2. Pisahkan data booking & transaksi agar tidak tercampur dengan profil member
+                state.bookings = allDocs.filter(d => !d.isMemberProfile);
+
+                // 3. Jadikan Firebase sebagai sumber utama daftar member
+                state.members = cloudMemberProfiles;
+
+                // 4. Pulihkan otomatis transaksi membership lama di Firebase (seperti MEM-REG-9187 / 8BM-8443) ke daftar member
+                if (recoverMembersFromBookings(state.bookings)) {
+                    syncMembersDirectoryToCloud();
+                }
+
+                // Urutkan member terbaru di bagian atas
+                state.members.sort((a, b) => {
+                    const dateA = a.registeredDate ? new Date(a.registeredDate).getTime() : 0;
+                    const dateB = b.registeredDate ? new Date(b.registeredDate).getTime() : 0;
+                    return dateB - dateA;
+                });
+
+                saveLocalMembers();
+                renderMembersTable();
                 renderTimeline();
                 renderTransactions();
                 renderOrdersPage();
                 updateOrderBadges();
             }, () => fallbackToLocalStorage());
-
-            db.collection("members").onSnapshot(snapshot => {
-                if (!snapshot.empty) {
-                    const cloudMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    cloudMembers.sort((a, b) => {
-                        const dateA = a.registeredDate ? new Date(a.registeredDate).getTime() : 0;
-                        const dateB = b.registeredDate ? new Date(b.registeredDate).getTime() : 0;
-                        return dateB - dateA;
-                    });
-                    state.members = cloudMembers;
-                    saveLocalMembers();
-                    renderMembersTable();
-                } else {
-                    const realLocalMembers = (state.members || []).filter(m => m.id !== "MEM-101");
-                    if (realLocalMembers.length > 0) {
-                        realLocalMembers.forEach(m => {
-                            db.collection("members").doc(m.id).set(m).catch(() => {});
-                        });
-                    }
-                }
-            }, () => {});
 
             db.collection("settings").doc("config").onSnapshot(doc => {
                 if (doc.exists) {
@@ -2870,6 +2972,23 @@
                     if (data.products) state.products = data.products;
                     if (data.discountRules) state.discountRules = data.discountRules;
                     if (data.settings) state.settings = data.settings;
+
+                    // Migrasi otomatis jika ada data member tersimpan di settings/config
+                    if (Array.isArray(data.membersDirectory) && data.membersDirectory.length > 0) {
+                        let migrated = false;
+                        data.membersDirectory.forEach(m => {
+                            if (m && m.id && m.id !== "MEM-101" && !state.members.some(existing => existing.id === m.id || existing.barcodeId === m.barcodeId)) {
+                                state.members.push(m);
+                                saveCloudMember(m);
+                                migrated = true;
+                            }
+                        });
+                        if (migrated) {
+                            saveLocalMembers();
+                            renderMembersTable();
+                        }
+                    }
+
                     saveLocalSettings();
                 } else {
                     saveCloudSettings();
@@ -2897,7 +3016,7 @@
                     products: state.products,
                     discountRules: state.discountRules,
                     settings: state.settings
-                }).catch(() => {});
+                }, { merge: true }).catch(() => {});
             }
         }
 
@@ -2999,6 +3118,15 @@
                 return;
             }
 
+            const existingBookings = state.bookings.filter(b => b.date === state.selectedDate && b.table === table && b.status !== "CANCELLED");
+            for (let b of existingBookings) {
+                const bEnd = b.startSlot + b.durationSlots;
+                if (startSlot < bEnd && endSlot > b.startSlot) {
+                    showCustomToast(`Meja ${table} sudah terbooking pada jam ${slotIndexToTime(b.startSlot)} - ${slotIndexToTime(bEnd)}`, "error");
+                    return;
+                }
+            }
+
             const hours = durationSlots * 0.25;
             const dayRate = getHourlyRateForDate(state.selectedDate);
             const tableFee = hours * dayRate;
@@ -3068,7 +3196,6 @@
             document.getElementById('modal-manage-actions')?.classList.toggle('hidden', isLocked);
             document.getElementById('modal-manage-locked-msg')?.classList.toggle('hidden', !isLocked);
 
-            // Update status badge
             const statusBadge = document.getElementById('modal-manage-status');
             if (statusBadge) {
                 statusBadge.className = isLocked 
@@ -3077,7 +3204,6 @@
                 statusBadge.innerText = isLocked ? "SELESAI & LUNAS" : "BOOKED (BELUM BAYAR)";
             }
 
-            // Tampilkan atau sembunyikan fitur ubah jadwal & meja sebelum tamu hadir
             const canReschedule = !booking.arrived && !isLocked;
             const rescheduleSection = document.getElementById('section-reschedule-table');
             if (rescheduleSection) {
@@ -3254,7 +3380,6 @@
                 const opt = document.createElement('option');
                 opt.value = s;
                 opt.innerText = slotIndexToTime(s);
-                // Waktu lampau tetap diizinkan dipilih sesuai permintaan, validasi bentrok dicek saat disimpan
                 if (s === currentSlot) opt.selected = true;
                 select.appendChild(opt);
             }
@@ -3280,13 +3405,12 @@
                 return;
             }
 
-            // Periksa bentrok dengan reservasi lain di meja tujuan (tidak boleh menimpa booking lain)
             const conflict = state.bookings.find(b => 
-                b.date === booking.date &&
-                b.table === newTable &&
-                b.id !== booking.id &&
-                b.status !== "CANCELLED" &&
-                b.startSlot < newEndSlot &&
+                b.date === booking.date && 
+                b.table === newTable && 
+                b.id !== booking.id && 
+                b.status !== "CANCELLED" && 
+                b.startSlot < newEndSlot && 
                 (b.startSlot + b.durationSlots) > newStartSlot
             );
 
@@ -3578,7 +3702,6 @@
                 }
             }
 
-            // Pastikan form input pesanan selalu tampil dan kartu sukses sebelumnya disembunyikan
             document.getElementById('direct-sale-form-container')?.classList.remove('hidden');
             document.getElementById('direct-sale-success-container')?.classList.add('hidden');
 
@@ -3664,8 +3787,24 @@
 
         function recalculateDirectSaleSummary() {
             const subtotal = state.directSaleItems.reduce((s, i) => s + (i.price * i.qty), 0);
+            const isGoogleChecked = document.getElementById('direct-chk-google-discount')?.checked;
+            let googleDiscountAmt = 0;
+            if (state.settings.googleReviewDiscountEnabled && isGoogleChecked) {
+                googleDiscountAmt = Math.round(subtotal * 0.05);
+            }
+            const total = Math.max(0, subtotal - googleDiscountAmt);
+
             if (document.getElementById('direct-summary-subtotal')) document.getElementById('direct-summary-subtotal').innerText = formatIDR(subtotal);
-            if (document.getElementById('direct-summary-total')) document.getElementById('direct-summary-total').innerText = formatIDR(subtotal);
+            const rowDiscount = document.getElementById('direct-row-discount-google');
+            if (rowDiscount) {
+                if (googleDiscountAmt > 0) {
+                    rowDiscount.classList.remove('hidden');
+                    if (document.getElementById('direct-summary-discount')) document.getElementById('direct-summary-discount').innerText = `- ${formatIDR(googleDiscountAmt)}`;
+                } else {
+                    rowDiscount.classList.add('hidden');
+                }
+            }
+            if (document.getElementById('direct-summary-total')) document.getElementById('direct-summary-total').innerText = formatIDR(total);
         }
 
         function confirmDirectSale(isDirectPaid = true) {
@@ -3705,7 +3844,7 @@
                 autoDiscountAmount: 0,
                 totalDiscount: googleDiscountAmt,
                 finalTotal: finalTotal,
-                status: isPaid ? "COMPLETED" : "BOOKED", // BOOKED = Belum Bayar (Open Bill)
+                status: isPaid ? "COMPLETED" : "BOOKED",
                 notes: notes,
                 createdTime: new Date().toISOString(),
                 completedOrCancelledTime: isPaid ? new Date().toISOString() : null
@@ -3928,7 +4067,6 @@
             const totals = calculateBookingTotals(booking);
             const items = booking.items || [];
 
-            // CETAK STRUK KHUSUS PEMBELIAN / PENDAFTARAN MEMBERSHIP
             if (booking.isMembershipTrx) {
                 const memBarcode = booking.memberBarcode || (booking.name.match(/8BM-\d+/) ? booking.name.match(/8BM-\d+/)[0] : '-');
                 const memName = booking.memberName || booking.name.replace('🀄 Member Baru: ', '').replace(/\(8BM-\d+\)/, '').trim();
@@ -4704,7 +4842,6 @@
                     };
                 });
 
-                // Tambahkan baris ringkasan total di bagian bawah laporan
                 excelData.push({
                     "ID Transaksi": "TOTAL LUNAS",
                     "Jenis Layanan": `${filteredBookings.filter(b => b.status === 'COMPLETED' || b.status === 'PAID').length} Transaksi Selesai`,
@@ -4727,35 +4864,32 @@
 
                 const fileName = `Transaksi_8Bamboo_${startDate}_sd_${endDate}.xlsx`;
 
-                // Jika library SheetJS (XLSX) tersedia, buat file .xlsx asli
                 if (typeof XLSX !== 'undefined') {
                     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-                    // Atur lebar kolom agar rapi saat dibuka di Excel
                     worksheet['!cols'] = [
-                        { wch: 16 }, // ID Transaksi
-                        { wch: 24 }, // Jenis Layanan
-                        { wch: 24 }, // Nama Pelanggan
-                        { wch: 16 }, // Nomor HP
-                        { wch: 16 }, // Nomor Meja
-                        { wch: 26 }, // Waktu Booking
-                        { wch: 18 }, // Waktu Dibuat
-                        { wch: 18 }, // Waktu Selesai / Batal
-                        { wch: 13 }, // Durasi
-                        { wch: 16 }, // Biaya Meja
-                        { wch: 18 }, // Booking Fee
-                        { wch: 36 }, // Rincian F&B
-                        { wch: 28 }, // Rincian Diskon
-                        { wch: 16 }, // Total Diskon
-                        { wch: 18 }, // Total Bayar
-                        { wch: 16 }, // Status
-                        { wch: 25 }  // Catatan
+                        { wch: 16 },
+                        { wch: 24 },
+                        { wch: 24 },
+                        { wch: 16 },
+                        { wch: 16 },
+                        { wch: 26 },
+                        { wch: 18 },
+                        { wch: 18 },
+                        { wch: 13 },
+                        { wch: 16 },
+                        { wch: 18 },
+                        { wch: 36 },
+                        { wch: 28 },
+                        { wch: 16 },
+                        { wch: 18 },
+                        { wch: 16 },
+                        { wch: 25 }
                     ];
 
                     const workbook = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(workbook, worksheet, "Riwayat Transaksi");
 
-                    // Gunakan Blob download agar kompatibel di semua browser & webview
                     const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
                     const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     const url = URL.createObjectURL(blob);
@@ -4771,7 +4905,6 @@
 
                     showCustomToast(`Berhasil mengekspor ${filteredBookings.length} transaksi ke Excel!`, "success");
                 } else {
-                    // Fallback unduhan CSV jika perangkat dalam mode offline penuh tanpa cache CDN XLSX
                     const headers = Object.keys(excelData[0]);
                     const csvRows = [
                         headers.join(","),
